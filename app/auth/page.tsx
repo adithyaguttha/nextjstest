@@ -25,19 +25,13 @@ function AuthPageInner() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Show loading spinner while auth state is loading
-  if (user === undefined) {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
-  }
-
-  // Redirect if user is already logged in (only if user is not null)
+  // All hooks must be called before any return/conditional
   useEffect(() => {
     if (user !== null) {
       router.push('/');
     }
   }, [user, router]);
 
-  // Clear errors when switching tabs
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab && tab !== activeTab) {
@@ -51,6 +45,31 @@ function AuthPageInner() {
     router.push(`/auth?tab=${tab}`);
     setErrors({});
   }, [router]);
+
+  useEffect(() => {
+    if (authError) {
+      if (authError.message.includes('already exists')) {
+        toast.error(`An account with email ${formData.email} already exists. Please login instead.`);
+        handleTabChange('login');
+      } else if (authError.message.includes('email confirmation')) {
+        toast('Please check your email to confirm your account before signing in.', {
+          icon: '📧',
+          style: {
+            background: '#3B82F6',
+            color: '#fff',
+          },
+        });
+        handleTabChange('login');
+      } else {
+        toast.error(authError.message);
+      }
+    }
+  }, [authError, formData.email, handleTabChange]);
+
+  // Now you can conditionally render
+  if (user === undefined) {
+    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+  }
 
   const validateForm = (isLogin: boolean) => {
     const newErrors: Record<string, string> = {};
@@ -127,27 +146,6 @@ function AuthPageInner() {
   const toggleConfirmPasswordVisibility = () => {
     setShowConfirmPassword(!showConfirmPassword);
   };
-
-  // Update the useEffect for handling auth errors
-  useEffect(() => {
-    if (authError) {
-      if (authError.message.includes('already exists')) {
-        toast.error(`An account with email ${formData.email} already exists. Please login instead.`);
-        handleTabChange('login');
-      } else if (authError.message.includes('email confirmation')) {
-        toast('Please check your email to confirm your account before signing in.', {
-          icon: '📧',
-          style: {
-            background: '#3B82F6',
-            color: '#fff',
-          },
-        });
-        handleTabChange('login');
-      } else {
-        toast.error(authError.message);
-      }
-    }
-  }, [authError, formData.email, handleTabChange]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col pt-2 pb-4 sm:pt-8 sm:pb-12 sm:px-6 lg:px-8">
