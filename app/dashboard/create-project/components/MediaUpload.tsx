@@ -108,7 +108,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
       const fileExt = file.name.split('.').pop();
       const fileName = `cover-${Date.now()}.${fileExt}`;
       const filePath = `${projectStorageFolder}/cover/${fileName}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('project-media')
         .upload(filePath, file, { cacheControl: '3600', upsert: false });
       if (uploadError) {
@@ -121,8 +121,8 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
       const { data: urlData } = supabase.storage.from('project-media').getPublicUrl(filePath);
       updateFormData({ cover_image_url: urlData.publicUrl });
       toast.success('Cover image uploaded successfully');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to upload cover image. Please try again.');
+    } catch {
+      toast.error('Failed to upload cover image. Please try again.');
     } finally {
       setCoverImageUploading(false);
       setCoverImageUploadProgress(0);
@@ -159,7 +159,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
             uploadedCount++;
             setProjectImagesUploadProgress((uploadedCount / totalFiles) * 100);
             return { url: publicUrl, category: activeCategory, storage_path: filePath };
-          } catch (error) {
+          } catch {
             failedUploads++;
             return null;
           }
@@ -176,7 +176,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
       if (failedUploads > 0) {
         toast.error(`Failed to upload ${failedUploads} image(s). Please try again.`);
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to upload some images. Please try again.');
     } finally {
       setProjectImagesUploading(false);
