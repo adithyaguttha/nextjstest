@@ -139,7 +139,7 @@ const stepLabels = [
   { label: 'Review', subtitle: 'Final review' },
 ];
 
-export function CreateProject() {
+function CreateProject() {
   const router = useRouter();
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
@@ -623,7 +623,7 @@ export function CreateProject() {
   );
 }
 
-export function CreateProjectWithGuard() {
+function CreateProjectWithGuard() {
   return (
     <NavigationGuardProvider>
       <CreateProject />

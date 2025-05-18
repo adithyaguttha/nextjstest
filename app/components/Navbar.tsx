@@ -159,13 +159,13 @@ export default function Navbar() {
                     href="/auth?tab=login"
                     className="px-4 py-2 rounded-md text-sm font-medium text-blue-100 hover:bg-[#033b7d] hover:text-white transition-colors border border-blue-100 hover:border-[#033b7d]"
                   >
-                    Login
+                Login
                   </Link>
                   <Link
                     href="/auth?tab=signup"
                     className="px-4 py-2 rounded-md text-sm font-medium bg-white text-[#044ca3] hover:bg-blue-50 transition-colors shadow-sm hover:shadow"
                   >
-                    Sign up
+                Sign up
                   </Link>
                 </>
               )}
@@ -210,25 +210,25 @@ export default function Navbar() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </button>
-              </div>
-            </div>
+          </div>
+        </div>
 
             {/* Mobile Navigation Links */}
             <div className="flex-1 px-4 pt-4 pb-3 space-y-1 overflow-y-auto">
-              <Link
-                href="/"
+            <Link
+              href="/"
                 className={navLinkClass('/')}
                 onClick={() => setIsOpen(false)}
-              >
-                Home
-              </Link>
-              <Link
-                href="/listings"
+            >
+              Home
+            </Link>
+            <Link
+              href="/listings"
                 className={navLinkClass('/listings')}
                 onClick={() => setIsOpen(false)}
-              >
-                Listings
-              </Link>
+            >
+              Listings
+            </Link>
             </div>
 
             {/* Mobile Auth Buttons - Only show if user is not authenticated */}
