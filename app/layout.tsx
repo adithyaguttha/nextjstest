@@ -3,6 +3,7 @@ import "./globals.css";
 import Navbar from "./components/Navbar";
 import { AuthProvider } from "../lib/AuthContext";
 import { Inter } from "next/font/google";
+import AuthGuard from './components/AuthGuard';
 
 const inter = Inter({
     subsets: ["latin"],
@@ -26,8 +27,10 @@ export default function RootLayout({
         className={`${inter.variable} antialiased`}
       >
         <AuthProvider>
-        <Navbar />
-        {children}
+          <AuthGuard>
+            <Navbar />
+            {children}
+          </AuthGuard>
         </AuthProvider>
       </body>
     </html>

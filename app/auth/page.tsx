@@ -25,9 +25,14 @@ function AuthPageInner() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Redirect if user is already logged in
+  // Show loading spinner while auth state is loading
+  if (user === undefined) {
+    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+  }
+
+  // Redirect if user is already logged in (only if user is not null)
   useEffect(() => {
-    if (user) {
+    if (user !== null) {
       router.push('/');
     }
   }, [user, router]);
