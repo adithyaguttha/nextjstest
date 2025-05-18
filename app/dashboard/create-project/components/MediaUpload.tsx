@@ -48,9 +48,11 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
   onNext,
   onBack,
 }) => {
-  const [imageUploading, setImageUploading] = useState(false);
+  const [coverImageUploading, setCoverImageUploading] = useState(false);
+  const [coverImageUploadProgress, setCoverImageUploadProgress] = useState(0);
+  const [projectImagesUploading, setProjectImagesUploading] = useState(false);
+  const [projectImagesUploadProgress, setProjectImagesUploadProgress] = useState(0);
   const [brochureUploading, setBrochureUploading] = useState(false);
-  const [imageUploadProgress, setImageUploadProgress] = useState(0);
   const [brochureUploadProgress, setBrochureUploadProgress] = useState(0);
   const [activeCategory, setActiveCategory] = useState(imageCategories[0]);
   const [projectStorageFolder, setProjectStorageFolder] = useState(formData.storage_folder || '');
@@ -95,89 +97,49 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
     return true;
   };
 
-  // Handle cover image upload
+  // Cover image upload handler
   const onDropCoverImage = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
-
     const file = acceptedFiles[0];
-    console.log('Starting cover image upload for file:', file.name, 'Size:', file.size);
-    
-    if (!validateFile(file)) {
-      console.log('File validation failed');
-      return;
-    }
-
+    if (!validateFile(file)) return;
     try {
-      setImageUploading(true);
-      setImageUploadProgress(0);
-      console.log('Upload state set to true');
-
+      setCoverImageUploading(true);
+      setCoverImageUploadProgress(0);
       const fileExt = file.name.split('.').pop();
       const fileName = `cover-${Date.now()}.${fileExt}`;
       const filePath = `${projectStorageFolder}/cover/${fileName}`;
-      console.log('Preparing to upload to path:', filePath);
-
-      // Upload file
-      console.log('Initiating Supabase storage upload...');
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('project-media')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
       if (uploadError) {
-        console.error('Upload error details:', uploadError);
         if (uploadError.message.includes('duplicate')) {
           throw new Error('A file with this name already exists. Please rename your file and try again.');
         }
         throw uploadError;
       }
-
-      console.log('Upload successful:', uploadData);
-      // Update progress after successful upload
-      setImageUploadProgress(100);
-
-      console.log('Getting public URL...');
-      const { data: urlData } = supabase.storage
-        .from('project-media')
-        .getPublicUrl(filePath);
-
-      console.log('Public URL data:', urlData);
+      setCoverImageUploadProgress(100);
+      const { data: urlData } = supabase.storage.from('project-media').getPublicUrl(filePath);
       updateFormData({ cover_image_url: urlData.publicUrl });
       toast.success('Cover image uploaded successfully');
     } catch (error) {
-      console.error('Error uploading cover image:', error);
-      if (error instanceof Error) {
-        console.error('Error name:', error.name);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-      }
       toast.error(error instanceof Error ? error.message : 'Failed to upload cover image. Please try again.');
     } finally {
-      console.log('Resetting upload state');
-      setImageUploading(false);
-      setImageUploadProgress(0);
+      setCoverImageUploading(false);
+      setCoverImageUploadProgress(0);
     }
   }, [projectStorageFolder, updateFormData]);
 
-  // Handle multiple project images upload
+  // Project images upload handler
   const onDropProjectImages = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
-
-    // Validate all files first
     const validFiles = acceptedFiles.filter(file => validateFile(file, ALLOWED_IMAGE_TYPES));
     if (validFiles.length === 0) return;
-
     try {
-      setImageUploading(true);
-      setImageUploadProgress(0);
-
+      setProjectImagesUploading(true);
+      setProjectImagesUploadProgress(0);
       const totalFiles = validFiles.length;
       let uploadedCount = 0;
       let failedUploads = 0;
-
-      // Process files in batches of 3 concurrent uploads
       const batchSize = 3;
       for (let i = 0; i < validFiles.length; i += batchSize) {
         const batch = validFiles.slice(i, i + batchSize);
@@ -186,55 +148,28 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
             const fileExt = file.name.split('.').pop();
             const fileName = `${activeCategory.toLowerCase().replace(/\s+/g, '_')}-${Date.now()}-${i + batchIndex}.${fileExt}`;
             const filePath = `${projectStorageFolder}/${activeCategory.toLowerCase().replace(/\s+/g, '_')}/${fileName}`;
-
             const { error: uploadError } = await supabase.storage
               .from('project-media')
-              .upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: false,
-              });
-
+              .upload(filePath, file, { cacheControl: '3600', upsert: false });
             if (uploadError) {
-              console.error(`Error uploading ${file.name}:`, uploadError);
               failedUploads++;
               return null;
             }
-
-            const { data: { publicUrl } } = supabase.storage
-              .from('project-media')
-              .getPublicUrl(filePath);
-
+            const { data: { publicUrl } } = supabase.storage.from('project-media').getPublicUrl(filePath);
             uploadedCount++;
-            // Update progress after each successful upload
-            setImageUploadProgress((uploadedCount / totalFiles) * 100);
-
-            return {
-              url: publicUrl,
-              category: activeCategory,
-              storage_path: filePath
-            };
+            setProjectImagesUploadProgress((uploadedCount / totalFiles) * 100);
+            return { url: publicUrl, category: activeCategory, storage_path: filePath };
           } catch (error) {
-            console.error(`Error uploading ${file.name}:`, error);
             failedUploads++;
             return null;
           }
         });
-
-        // Wait for all uploads in the current batch to complete
         const results = await Promise.all(uploadPromises);
-        
-        // Filter out failed uploads and update form data with successful ones
         const successfulUploads = results.filter((result): result is NonNullable<typeof result> => result !== null);
         if (successfulUploads.length > 0) {
-          updateFormData({
-            project_images: [
-              ...formData.project_images,
-              ...successfulUploads
-            ]
-          });
+          updateFormData({ project_images: [...formData.project_images, ...successfulUploads] });
         }
       }
-
       if (uploadedCount > 0) {
         toast.success(`Successfully uploaded ${uploadedCount} image(s)`);
       }
@@ -242,11 +177,10 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
         toast.error(`Failed to upload ${failedUploads} image(s). Please try again.`);
       }
     } catch (error) {
-      console.error('Error in batch upload:', error);
       toast.error('Failed to upload some images. Please try again.');
     } finally {
-      setImageUploading(false);
-      setImageUploadProgress(0);
+      setProjectImagesUploading(false);
+      setProjectImagesUploadProgress(0);
     }
   }, [activeCategory, projectStorageFolder, formData.project_images, updateFormData]);
 
@@ -317,30 +251,24 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
   const { getRootProps: getCoverImageRootProps, getInputProps: getCoverImageInputProps } = useDropzone({
     onDrop: onDropCoverImage,
-    accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.webp']
-    },
+    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
     maxFiles: 1,
-    disabled: imageUploading || brochureUploading
+    disabled: coverImageUploading || projectImagesUploading || brochureUploading
   });
 
   const { getRootProps: getProjectImagesRootProps, getInputProps: getProjectImagesInputProps } = useDropzone({
     onDrop: onDropProjectImages,
-    accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.webp']
-    },
+    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
     multiple: true,
-    disabled: imageUploading || brochureUploading
+    disabled: coverImageUploading || projectImagesUploading || brochureUploading
   });
 
   // Add brochure dropzone
   const { getRootProps: getBrochureRootProps, getInputProps: getBrochureInputProps } = useDropzone({
     onDrop: onDropBrochure,
-    accept: {
-      'application/pdf': ['.pdf']
-    },
+    accept: { 'application/pdf': ['.pdf'] },
     maxFiles: 1,
-    disabled: imageUploading || brochureUploading
+    disabled: coverImageUploading || projectImagesUploading || brochureUploading
   });
 
   const removeImage = (imageUrl: string) => {
@@ -441,7 +369,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
         <div
           {...getCoverImageRootProps()}
           className={`mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10 cursor-pointer
-            ${imageUploading ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-400'}`}
+            ${coverImageUploading ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-400'}`}
         >
           <div className="text-center">
             {formData.cover_image_url ? (
@@ -470,7 +398,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
                 <PhotoIcon className="mx-auto h-12 w-12 text-gray-300" aria-hidden="true" />
                 <div className="mt-4 flex text-sm leading-6 text-gray-600">
                   <span className="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
-                    {imageUploading ? 'Uploading...' : 'Upload a file'}
+                    {coverImageUploading ? 'Uploading...' : 'Upload a file'}
                   </span>
                   <p className="pl-1">or drag and drop</p>
                 </div>
@@ -480,7 +408,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
             <input {...getCoverImageInputProps()} />
           </div>
         </div>
-        {imageUploading && imageUploadProgress > 0 && (
+        {coverImageUploading && coverImageUploadProgress > 0 && (
           <div className="mt-4">
             <div className="relative pt-1">
               <div className="flex mb-2 items-center justify-between">
@@ -491,13 +419,13 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
                 </div>
                 <div className="text-right">
                   <span className="text-xs font-semibold inline-block text-indigo-600">
-                    {Math.round(imageUploadProgress)}%
+                    {Math.round(coverImageUploadProgress)}%
                   </span>
                 </div>
               </div>
               <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-indigo-200">
                 <div
-                  style={{ width: `${imageUploadProgress}%` }}
+                  style={{ width: `${coverImageUploadProgress}%` }}
                   className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-500 transition-all duration-500"
                 ></div>
               </div>
@@ -622,9 +550,9 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
           <div
             {...getProjectImagesRootProps()}
             className={`h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50
-              ${imageUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              ${projectImagesUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            {imageUploading ? (
+            {projectImagesUploading ? (
               <div className="flex flex-col items-center">
                 <svg className="animate-spin h-6 w-6 text-indigo-600 mb-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -642,7 +570,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
             <input {...getProjectImagesInputProps()} />
           </div>
         </div>
-        {imageUploading && imageUploadProgress > 0 && (
+        {projectImagesUploading && projectImagesUploadProgress > 0 && (
           <div className="mt-4">
             <div className="relative pt-1">
               <div className="flex mb-2 items-center justify-between">
@@ -653,13 +581,13 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
                 </div>
                 <div className="text-right">
                   <span className="text-xs font-semibold inline-block text-indigo-600">
-                    {Math.round(imageUploadProgress)}%
+                    {Math.round(projectImagesUploadProgress)}%
                   </span>
                 </div>
               </div>
               <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-indigo-200">
                 <div
-                  style={{ width: `${imageUploadProgress}%` }}
+                  style={{ width: `${projectImagesUploadProgress}%` }}
                   className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-500 transition-all duration-500"
                 ></div>
               </div>
@@ -686,7 +614,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
         <div
           {...getBrochureRootProps()}
           className={`mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10 cursor-pointer
-            ${imageUploading || brochureUploading ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-400'}`}
+            ${coverImageUploading || projectImagesUploading || brochureUploading ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-400'}`}
         >
           <div className="text-center">
             {formData.brochure_url ? (
@@ -728,7 +656,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
                 </svg>
                 <div className="mt-4 flex text-sm leading-6 text-gray-600">
                   <span className="relative cursor-pointer rounded-md bg-white font-semibold text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-600 focus-within:ring-offset-2 hover:text-indigo-500">
-                    {imageUploading || brochureUploading ? 'Uploading...' : 'Upload a file'}
+                    {coverImageUploading || projectImagesUploading || brochureUploading ? 'Uploading...' : 'Upload a file'}
                   </span>
                   <p className="pl-1">or drag and drop</p>
                 </div>
@@ -776,14 +704,14 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
         <button
           type="button"
           onClick={handleNext}
-          disabled={imageUploading || brochureUploading || !formData.cover_image_url}
+          disabled={coverImageUploading || projectImagesUploading || brochureUploading || !formData.cover_image_url}
           className={`rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm
-            ${imageUploading || brochureUploading || !formData.cover_image_url
+            ${coverImageUploading || projectImagesUploading || brochureUploading || !formData.cover_image_url
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-indigo-600 hover:bg-indigo-500'
             }`}
         >
-          {imageUploading || brochureUploading ? 'Uploading...' : 'Next'}
+          {coverImageUploading || projectImagesUploading || brochureUploading ? 'Uploading...' : 'Next'}
         </button>
       </div>
     </div>

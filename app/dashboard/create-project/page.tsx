@@ -148,6 +148,7 @@ function CreateProject() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const hasUnsavedRef = React.useRef(false);
 
   useNavigationGuard(hasUnsavedChanges);
 
@@ -166,13 +167,13 @@ function CreateProject() {
 
   useEffect(() => {
     const handleRouteChange = () => {
-      if (hasUnsavedChanges) {
-        const confirmLeave = window.confirm(
-          'You have unsaved changes. Are you sure you want to leave this page? All form data will be lost.'
-        );
-        if (!confirmLeave) {
-          throw 'Route change aborted by user';
-        }
+      if (hasUnsavedRef.current) {
+         const confirmLeave = window.confirm(
+           'You have unsaved changes. Are you sure you want to leave this page? All form data will be lost.'
+         );
+         if (!confirmLeave) {
+           throw 'Route change aborted by user';
+         }
       }
     };
 
@@ -183,7 +184,12 @@ function CreateProject() {
       // @ts-expect-error [reason: router.events is not typed in Next.js app router]
       router.events?.off('routeChangeStart', handleRouteChange);
     };
-  }, [hasUnsavedChanges, router]);
+  }, [router]);
+
+  // Update hasUnsavedRef (and then setHasUnsavedChanges) whenever hasUnsavedChanges changes.
+  useEffect(() => {
+    hasUnsavedRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
 
   const resetCurrentStep = () => {
     if (window.confirm('Are you sure you want to reset this form? This will clear all data in the current step.')) {
@@ -293,10 +299,16 @@ function CreateProject() {
 
   const handleSubmit = async () => {
     if (!user) {
-      setError('You must be logged in to create a project');
+      setError("You must be logged in to create a project");
+      toast.error("You must be logged in to create a project");
       return;
     }
-
+    // Validate required fields
+    if (!formData.name || !formData.developer_id || !formData.city_id || !formData.locality_id) {
+      setError("Please fill all required fields.");
+      toast.error("Please fill all required fields.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -459,6 +471,7 @@ function CreateProject() {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create project';
       setError(errorMessage);
       setMessage({ type: 'error', text: `Failed to create project: ${errorMessage}` });
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
