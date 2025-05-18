@@ -148,7 +148,6 @@ function CreateProject() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const hasUnsavedRef = React.useRef(false);
 
   useNavigationGuard(hasUnsavedChanges);
 
@@ -167,13 +166,13 @@ function CreateProject() {
 
   useEffect(() => {
     const handleRouteChange = () => {
-      if (hasUnsavedRef.current) {
-         const confirmLeave = window.confirm(
-           'You have unsaved changes. Are you sure you want to leave this page? All form data will be lost.'
-         );
-         if (!confirmLeave) {
-           throw 'Route change aborted by user';
-         }
+      if (hasUnsavedChanges) {
+        const confirmLeave = window.confirm(
+          'You have unsaved changes. Are you sure you want to leave this page? All form data will be lost.'
+        );
+        if (!confirmLeave) {
+          throw 'Route change aborted by user';
+        }
       }
     };
 
@@ -184,12 +183,7 @@ function CreateProject() {
       // @ts-expect-error [reason: router.events is not typed in Next.js app router]
       router.events?.off('routeChangeStart', handleRouteChange);
     };
-  }, [router]);
-
-  // Update hasUnsavedRef (and then setHasUnsavedChanges) whenever hasUnsavedChanges changes.
-  useEffect(() => {
-    hasUnsavedRef.current = hasUnsavedChanges;
-  }, [hasUnsavedChanges]);
+  }, [hasUnsavedChanges, router]);
 
   const resetCurrentStep = () => {
     if (window.confirm('Are you sure you want to reset this form? This will clear all data in the current step.')) {
