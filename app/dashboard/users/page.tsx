@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '../../../lib/supabase';
 import Image from 'next/image';
 
 interface Profile {
@@ -22,7 +22,6 @@ export default function UsersPage() {
   const [showSavedProjectsModal, setShowSavedProjectsModal] = useState(false);
   const [showViewedProjectsModal, setShowViewedProjectsModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     const fetchUsers = async () => {
