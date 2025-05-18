@@ -1,15 +1,15 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
-import { useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '../../lib/AuthContext';
 import { Toaster, toast } from 'react-hot-toast';
 
-export default function AuthPage() {
+export const dynamic = 'force-dynamic';
+
+function AuthPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn, signUp, error: authError, user, loading } = useAuth();
@@ -447,5 +447,13 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AuthPageInner />
+    </Suspense>
   );
 } 
