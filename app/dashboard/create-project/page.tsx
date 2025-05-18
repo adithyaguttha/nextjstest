@@ -165,13 +165,12 @@ export function CreateProject() {
   }, [hasUnsavedChanges]);
 
   useEffect(() => {
-    const handleRouteChange = (url: string) => {
+    const handleRouteChange = () => {
       if (hasUnsavedChanges) {
         const confirmLeave = window.confirm(
           'You have unsaved changes. Are you sure you want to leave this page? All form data will be lost.'
         );
         if (!confirmLeave) {
-          // Prevent navigation
           throw 'Route change aborted by user';
         }
       }

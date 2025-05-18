@@ -6,6 +6,7 @@ import { PlusIcon, PhotoIcon, XMarkIcon, ChevronDownIcon, ChevronUpIcon } from '
 import BHKTypeDropdown from '../../../components/BHKTypeDropdown';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
+import type { ProjectFormData } from '../page';
 
 interface Model {
   bhk_type: string;
@@ -44,11 +45,8 @@ const emptyModel: Model = {
 };
 
 interface ModelsPricingProps {
-  formData: {
-    models: Model[];
-    [key: string]: unknown;
-  };
-  updateFormData: (data: Partial<{ models: Model[] }>) => void;
+  formData: ProjectFormData;
+  updateFormData: (data: Partial<ProjectFormData>) => void;
   onNext: () => void;
   onBack: () => void;
   projectId?: string;
