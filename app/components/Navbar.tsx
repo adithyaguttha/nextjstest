@@ -1,20 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '../../lib/AuthContext';
 import ProfileDropdown from './ProfileDropdown';
 
 export default function Navbar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, signOut } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+  const { user, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -36,28 +35,28 @@ export default function Navbar() {
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY;
-      const heroSearch = document.querySelector('.hero-search-container');
-      if (heroSearch) {
-        const rect = heroSearch.getBoundingClientRect();
-        setIsScrolled(scrollPosition > rect.top + window.scrollY);
-      }
+      setIsScrolled(scrollPosition > 0);
     };
 
     window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleSignOut = async () => {
-    await signOut();
-    setIsMobileMenuOpen(false);
-    router.push('/');
-  };
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
 
-  const isActive = (path: string) => pathname === path;
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const navLinkClass = (path: string) => 
+    `text-gray-300 hover:bg-[#033b7d] hover:text-white px-3 py-2 rounded-md text-sm font-medium ${
+      pathname === path ? 'bg-[#033b7d] text-white' : ''
+    }`;
 
   return (
     <nav className="sticky top-0 z-50 bg-gradient-to-r from-[#044ca3] to-[#0366d6] shadow-lg">
@@ -141,30 +140,16 @@ export default function Navbar() {
           <div className="hidden md:flex md:items-center md:space-x-4">
             <Link
               href="/"
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive('/') ? 'text-white bg-[#033b7d]' : 'text-blue-100 hover:bg-[#033b7d] hover:text-white'
-              }`}
+              className={navLinkClass('/')}
             >
               Home
             </Link>
             <Link
               href="/listings"
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                isActive('/listings') ? 'text-white bg-[#033b7d]' : 'text-blue-100 hover:bg-[#033b7d] hover:text-white'
-              }`}
+              className={navLinkClass('/listings')}
             >
               Listings
             </Link>
-            {user && (
-              <Link
-                href="/saved"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive('/saved') ? 'text-white bg-[#033b7d]' : 'text-blue-100 hover:bg-[#033b7d] hover:text-white'
-                }`}
-              >
-                Saved Properties
-              </Link>
-            )}
             <div className="ml-4 flex space-x-3">
               {user ? (
                 <ProfileDropdown user={user} onSignOut={signOut} />
@@ -174,13 +159,13 @@ export default function Navbar() {
                     href="/auth?tab=login"
                     className="px-4 py-2 rounded-md text-sm font-medium text-blue-100 hover:bg-[#033b7d] hover:text-white transition-colors border border-blue-100 hover:border-[#033b7d]"
                   >
-                Login
+                    Login
                   </Link>
                   <Link
                     href="/auth?tab=signup"
                     className="px-4 py-2 rounded-md text-sm font-medium bg-white text-[#044ca3] hover:bg-blue-50 transition-colors shadow-sm hover:shadow"
                   >
-                Sign up
+                    Sign up
                   </Link>
                 </>
               )}
@@ -225,40 +210,25 @@ export default function Navbar() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </button>
-          </div>
-        </div>
+              </div>
+            </div>
 
             {/* Mobile Navigation Links */}
             <div className="flex-1 px-4 pt-4 pb-3 space-y-1 overflow-y-auto">
-            <Link
-              href="/"
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
-                  isActive('/') ? 'text-[#044ca3] bg-blue-50' : 'text-gray-700 hover:text-[#044ca3] hover:bg-blue-50'
-                }`}
+              <Link
+                href="/"
+                className={navLinkClass('/')}
                 onClick={() => setIsOpen(false)}
-            >
-              Home
-            </Link>
-            <Link
-              href="/listings"
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
-                  isActive('/listings') ? 'text-[#044ca3] bg-blue-50' : 'text-gray-700 hover:text-[#044ca3] hover:bg-blue-50'
-                }`}
+              >
+                Home
+              </Link>
+              <Link
+                href="/listings"
+                className={navLinkClass('/listings')}
                 onClick={() => setIsOpen(false)}
-            >
-              Listings
-            </Link>
-              {user && (
-                <Link
-                  href="/saved"
-                  className={`block px-3 py-2 rounded-md text-base font-medium ${
-                    isActive('/saved') ? 'text-[#044ca3] bg-blue-50' : 'text-gray-700 hover:text-[#044ca3] hover:bg-blue-50'
-                  }`}
-                  onClick={() => setIsOpen(false)}
-                >
-                  Saved Properties
-                </Link>
-              )}
+              >
+                Listings
+              </Link>
             </div>
 
             {/* Mobile Auth Buttons - Only show if user is not authenticated */}

@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
 interface NavigationGuardContextType {
@@ -15,7 +15,6 @@ const NavigationGuardContext = createContext<NavigationGuardContextType | undefi
 export function NavigationGuardProvider({ children }: { children: React.ReactNode }) {
   const [showModal, setShowModal] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
-  const unblockRef = useRef<(() => void) | null>(null);
 
   const openModal = (nextHref: string) => {
     setShowModal(true);
@@ -67,13 +66,21 @@ export function useNavigationGuard(shouldBlock: boolean) {
   const ctx = useContext(NavigationGuardContext);
   const lastPathRef = React.useRef(pathname);
   const blockPopRef = React.useRef(false);
+  const isHandlingPopStateRef = React.useRef(false);
+
+  // Update lastPathRef without triggering re-renders
+  useEffect(() => {
+    lastPathRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     if (!ctx) return;
-    const handleClick = (e: any) => {
+
+    const handleClick = (e: unknown) => {
       if (
         shouldBlock &&
-        e.target.tagName === 'A' &&
+        e instanceof MouseEvent &&
+        e.target instanceof HTMLAnchorElement &&
         e.target.href &&
         !e.target.target &&
         !e.metaKey &&
@@ -87,33 +94,45 @@ export function useNavigationGuard(shouldBlock: boolean) {
         }
       }
     };
-    document.addEventListener('click', handleClick, true);
 
-    // Handle browser back/forward (popstate)
     const handlePopState = (e: PopStateEvent) => {
-      if (shouldBlock) {
+      // Prevent multiple handlers from running simultaneously
+      if (isHandlingPopStateRef.current) return;
+      
+      if (shouldBlock && !blockPopRef.current) {
+        isHandlingPopStateRef.current = true;
+        
         // Block popstate navigation and show modal
         e.preventDefault?.();
         blockPopRef.current = true;
-        ctx.openModal(document.referrer || '/');
-        // Push the current path back to history so the URL doesn't change
-        window.history.pushState(null, '', lastPathRef.current);
+        
+        // Use setTimeout to break the synchronous update cycle
+        setTimeout(() => {
+          ctx.openModal(document.referrer || '/');
+          // Use replaceState to avoid triggering another popstate
+          window.history.replaceState(null, '', lastPathRef.current);
+          isHandlingPopStateRef.current = false;
+        }, 0);
       }
     };
+
+    document.addEventListener('click', handleClick, true);
     window.addEventListener('popstate', handlePopState);
-    lastPathRef.current = pathname;
 
     return () => {
       document.removeEventListener('click', handleClick, true);
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [shouldBlock, pathname, ctx]);
+  }, [shouldBlock, ctx, pathname]);
 
   // When user confirms navigation after popstate, go back
   useEffect(() => {
     if (ctx?.pendingHref && blockPopRef.current) {
       blockPopRef.current = false;
-      window.history.back();
+      // Use setTimeout to break the synchronous update cycle
+      setTimeout(() => {
+        window.history.back();
+      }, 0);
     }
   }, [ctx?.pendingHref]);
 } 

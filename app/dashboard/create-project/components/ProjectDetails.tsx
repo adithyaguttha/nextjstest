@@ -26,26 +26,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ formData, updateFormDat
     return () => {
       if (toastTimeout.current) clearTimeout(toastTimeout.current);
     };
-  }, [toastMessage]);
-
-  const validate = () => {
-    const newErrors: { [key: string]: string } = {};
-    
-    if (!formData.description.trim()) {
-      newErrors.description = 'Project description is required.';
-    }
-    
-    if (!formData.project_highlights.length || formData.project_highlights.every(h => !h.trim())) {
-      newErrors.project_highlights = 'At least one project highlight is required.';
-    }
-    
-    if (!formData.emi_details.amount || !formData.emi_details.duration || !formData.emi_details.interest_rate) {
-      newErrors.emi_details = 'All EMI details are required.';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  }, [toastMessage, setToastMessage]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -91,7 +72,22 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ formData, updateFormDat
   const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validate()) {
+    const newErrors: { [key: string]: string } = {};
+    
+    if (!formData.description.trim()) {
+      newErrors.description = 'Project description is required.';
+    }
+    
+    if (!formData.project_highlights.length || formData.project_highlights.every(h => !h.trim())) {
+      newErrors.project_highlights = 'At least one project highlight is required.';
+    }
+    
+    if (!formData.emi_details.amount || !formData.emi_details.duration || !formData.emi_details.interest_rate) {
+      newErrors.emi_details = 'All EMI details are required.';
+    }
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
       toast.error('Please fill in all required fields correctly');
       return;
     }

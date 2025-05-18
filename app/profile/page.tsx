@@ -80,7 +80,7 @@ export default function ProfilePage() {
       if (avatarFile) {
         const fileExt = avatarFile.name.split('.').pop();
         const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-        const { error: uploadError, data } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(fileName, avatarFile);
 

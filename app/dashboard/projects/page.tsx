@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
-import { useAuth } from '../../../lib/AuthContext';
-import { PlusIcon, PencilSquareIcon, TrashIcon, EyeIcon, FunnelIcon, ArrowsUpDownIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilSquareIcon, TrashIcon, EyeIcon, ChevronUpIcon, ChevronDownIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 import DeleteProjectModal from '../../components/DeleteProjectModal';
 import { Toaster, toast } from 'react-hot-toast';
 
@@ -34,11 +33,9 @@ type SortColumn = 'name' | 'created_at' | 'price_range->>min';
 type SortDirection = 'asc' | 'desc';
 
 export default function ProjectsPage() {
-  const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [sortColumn, setSortColumn] = useState<SortColumn>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,11 +43,7 @@ export default function ProjectsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<{ id: string; name: string } | null>(null);
 
-  useEffect(() => {
-    fetchProjects();
-  }, [sortColumn, sortDirection, statusFilter]);
-
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
       let query = supabase
@@ -88,7 +81,11 @@ export default function ProjectsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, sortColumn, sortDirection]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -227,18 +224,6 @@ export default function ProjectsPage() {
           </Link>
         </div>
       </div>
-
-      {message && (
-        <div
-          className={`mt-6 p-4 rounded-md ${
-            message.type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-          } border`}
-        >
-          <p className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-            {message.text}
-          </p>
-        </div>
-      )}
 
       {error && (
         <div className="mt-6 p-4 rounded-md bg-red-50 border border-red-200">
@@ -422,7 +407,6 @@ export default function ProjectsPage() {
             setProjectToDelete(null);
           }}
           onConfirm={handleDeleteConfirm}
-          projectName={projectToDelete.name}
         />
       )}
     </div>

@@ -64,14 +64,6 @@ export default function AmenityMultiSelect({
         option.toLowerCase().includes(query.toLowerCase())
       );
 
-  const handleSelect = (amenity: Amenity) => {
-    if (selectedAmenities.includes(amenity)) {
-      onChange(selectedAmenities.filter(a => a !== amenity));
-    } else {
-      onChange([...selectedAmenities, amenity]);
-    }
-  };
-
   const removeAmenity = (amenity: Amenity) => {
     onChange(selectedAmenities.filter(a => a !== amenity));
   };

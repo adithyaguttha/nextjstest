@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -39,11 +39,11 @@ export default function AuthPage() {
     }
   }, [searchParams, activeTab]);
 
-  const handleTabChange = (tab: string) => {
+  const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab);
     router.push(`/auth?tab=${tab}`);
     setErrors({});
-  };
+  }, [router]);
 
   const validateForm = (isLogin: boolean) => {
     const newErrors: Record<string, string> = {};
@@ -140,7 +140,7 @@ export default function AuthPage() {
         toast.error(authError.message);
       }
     }
-  }, [authError]);
+  }, [authError, formData.email, handleTabChange]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col pt-2 pb-4 sm:pt-8 sm:pb-12 sm:px-6 lg:px-8">

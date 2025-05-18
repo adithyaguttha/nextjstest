@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Combobox } from '@headlessui/react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CheckIcon, ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
 
@@ -28,12 +27,7 @@ export default function MultiSelectAmenityDropdown({
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
-  // Fetch amenities on mount
-  useEffect(() => {
-    fetchAmenities();
-  }, []);
-
-  const fetchAmenities = async () => {
+  const fetchAmenities = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -51,7 +45,11 @@ export default function MultiSelectAmenityDropdown({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAmenities();
+  }, [fetchAmenities]);
 
   // Filter amenities based on search query
   const filteredAmenities = query === ''

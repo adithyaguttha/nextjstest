@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CheckIcon, ChevronUpDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Combobox } from '@headlessui/react';
 import { supabase } from '../../lib/supabase';
@@ -31,11 +31,7 @@ const AmenitySelector: React.FC<AmenitySelectorProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchAmenities();
-  }, []);
-
-  const fetchAmenities = async () => {
+  const fetchAmenities = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('amenities')
@@ -50,7 +46,11 @@ const AmenitySelector: React.FC<AmenitySelectorProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAmenities();
+  }, [fetchAmenities]);
 
   const filteredAmenities = query === ''
     ? amenities
@@ -128,10 +128,12 @@ const AmenitySelector: React.FC<AmenitySelectorProps> = ({
                       )}
                       {amenity.icon_url && (
                         <span className="mr-2 flex-shrink-0">
-                          <img 
+                          <Image 
                             src={amenity.icon_url} 
-                            alt="" 
-                            className="h-5 w-5 object-contain"
+                            alt={amenity.name} 
+                            width={24}
+                            height={24}
+                            className="w-6 h-6 object-contain"
                           />
                         </span>
                       )}
@@ -162,10 +164,12 @@ const AmenitySelector: React.FC<AmenitySelectorProps> = ({
                 className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800"
               >
                 {amenity.icon_url && (
-                  <img 
+                  <Image 
                     src={amenity.icon_url} 
-                    alt="" 
-                    className="h-4 w-4 object-contain"
+                    alt={amenity.name} 
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 object-contain"
                   />
                 )}
                 {amenity.name}

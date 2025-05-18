@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, type User, type AuthError } from './supabase';
+import type { AuthResponse } from '@supabase/supabase-js';
 
 type AuthContextType = {
   user: (User & { 
@@ -96,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           password,
         }),
         timeoutPromise
-      ]) as { data: any, error: any };
+      ]) as AuthResponse;
 
       if (error) {
         // Handle specific sign-in errors
@@ -119,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: profile, error: profileError } = await Promise.race([
           profilePromise,
           timeoutPromise
-        ]) as { data: any, error: any };
+        ]) as { data: { is_admin: boolean; avatar_url: string } | null, error: Error | null };
 
         if (profileError) {
           console.error('Error fetching profile:', profileError);
@@ -182,7 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
         }),
         timeoutPromise
-      ]) as { data: any, error: any };
+      ]) as AuthResponse;
 
       if (signUpError) {
         // Handle specific signup errors

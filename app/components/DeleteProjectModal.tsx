@@ -8,10 +8,9 @@ interface DeleteProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (deleteMedia: boolean) => Promise<void>;
-  projectName: string;
 }
 
-export default function DeleteProjectModal({ isOpen, onClose, onConfirm, projectName }: DeleteProjectModalProps) {
+export default function DeleteProjectModal({ isOpen, onClose, onConfirm }: DeleteProjectModalProps) {
   const [deleteMedia, setDeleteMedia] = useState(true);
   const [deletionStep, setDeletionStep] = useState<DeletionStep>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +110,7 @@ export default function DeleteProjectModal({ isOpen, onClose, onConfirm, project
                     </Dialog.Title>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
-                        Are you sure you want to delete "{projectName}"? This action cannot be undone.
+                        Are you sure you want to delete this project? This action cannot be undone. If you click &quot;Delete&quot;, the project will be permanently removed.
                       </p>
                     </div>
                   </div>

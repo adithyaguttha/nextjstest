@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../lib/AuthContext';
 import { supabase } from '../../lib/supabase';
+import Image from 'next/image';
 
 interface Developer {
   id: string;
@@ -155,10 +156,12 @@ export default function DevelopersPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       {developer.logo_url ? (
-                        <img
+                        <Image
                           src={developer.logo_url}
                           alt={developer.name}
-                          className="h-12 w-12 rounded-lg object-cover"
+                          width={64}
+                          height={64}
+                          className="w-16 h-16 rounded-full"
                         />
                       ) : (
                         <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '../../../../lib/supabase';
 import type { ProjectFormData } from '../page';
 import { BuildingOffice2Icon, UserIcon, MapPinIcon, CurrencyRupeeIcon, ArrowRightIcon, MapIcon, XMarkIcon } from '@heroicons/react/24/outline';
@@ -25,13 +25,7 @@ interface BasicInfoProps {
   formData: ProjectFormData;
   updateFormData: (data: Partial<ProjectFormData>) => void;
   onNext: () => void;
-  onReset: () => void;
 }
-
-const possessionOptions = [
-  { label: 'Ready to Move', value: 'Ready to Move' },
-  { label: 'Under Construction', value: 'Under Construction' },
-];
 
 const unitOptions = ['sq.ft.', 'sq.m.', 'acres'];
 
@@ -42,11 +36,10 @@ const priceUnitOptions = [
   { label: 'Rupees', value: 'rupees' },
 ];
 
-const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext, onReset }) => {
+const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext }) => {
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [localities, setLocalities] = useState<Locality[]>([]);
-  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   // Searchable dropdown states
   const [devQuery, setDevQuery] = useState('');
@@ -59,10 +52,53 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
   const [toast, setToast] = useState<string | null>(null);
   const toastTimeout = useRef<NodeJS.Timeout | null>(null);
 
+  const fetchDevelopers = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('developers')
+        .select('id, name')
+        .order('name');
+      if (error) throw error;
+      setDevelopers(data || []);
+    } catch (err) {
+      console.error('Error fetching developers:', err);
+      setErrors(prev => ({ ...prev, developer_id: 'Failed to load developers' }));
+    }
+  }, []);
+
+  const fetchCities = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('cities')
+        .select('id, name')
+        .order('name');
+      if (error) throw error;
+      setCities(data || []);
+    } catch (err) {
+      console.error('Error fetching cities:', err);
+      setErrors(prev => ({ ...prev, city_id: 'Failed to load cities' }));
+    }
+  }, []);
+
+  const fetchLocalities = useCallback(async (cityId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('localities')
+        .select('id, name, city_id')
+        .eq('city_id', cityId)
+        .order('name');
+      if (error) throw error;
+      setLocalities(data || []);
+    } catch (err) {
+      console.error('Error fetching localities:', err);
+      setErrors(prev => ({ ...prev, locality_id: 'Failed to load localities' }));
+    }
+  }, []);
+
   useEffect(() => {
     fetchDevelopers();
     fetchCities();
-  }, []);
+  }, [fetchDevelopers, fetchCities]);
 
   useEffect(() => {
     if (formData.city_id) {
@@ -71,7 +107,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
       setLocalities([]);
       updateFormData({ locality_id: '' });
     }
-  }, [formData.city_id]);
+  }, [formData.city_id, updateFormData, fetchLocalities]);
 
   useEffect(() => {
     if (toast) {
@@ -82,52 +118,6 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
       if (toastTimeout.current) clearTimeout(toastTimeout.current);
     };
   }, [toast]);
-
-  const fetchDevelopers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('developers')
-        .select('id, name')
-        .order('name');
-      
-      if (error) throw error;
-      setDevelopers(data || []);
-    } catch (err) {
-      console.error('Error fetching developers:', err);
-      setErrors({ ...errors, developer_id: 'Failed to load developers' });
-    }
-  };
-
-  const fetchCities = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('cities')
-        .select('id, name')
-        .order('name');
-      
-      if (error) throw error;
-      setCities(data || []);
-    } catch (err) {
-      console.error('Error fetching cities:', err);
-      setErrors({ ...errors, city_id: 'Failed to load cities' });
-    }
-  };
-
-  const fetchLocalities = async (cityId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('localities')
-        .select('id, name, city_id')
-        .eq('city_id', cityId)
-        .order('name');
-      
-      if (error) throw error;
-      setLocalities(data || []);
-    } catch (err) {
-      console.error('Error fetching localities:', err);
-      setErrors({ ...errors, locality_id: 'Failed to load localities' });
-    }
-  };
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
@@ -213,14 +203,11 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
     if (validate()) onNext();
   };
 
-  // Searchable dropdown helpers
-  const filterList = (list: { id: string; name: string }[], query: string) =>
-    list.filter(item => item.name.toLowerCase().includes(query.toLowerCase()));
-
   // Dropdown click outside handler
   const devDropdownRef = useRef<HTMLDivElement>(null);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
   const localityDropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (
@@ -235,7 +222,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  }, [devDropdownRef, cityDropdownRef, localityDropdownRef, setShowDevDropdown, setShowCityDropdown, setShowLocalityDropdown]);
 
   return (
     <form onSubmit={handleNext} className="space-y-8">
@@ -297,10 +284,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
             {/* Dropdown */}
             {showDevDropdown && (
               <ul className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow max-h-48 overflow-y-auto">
-                {filterList(developers, devQuery || '').length === 0 ? (
-                  <li className="px-4 py-2 text-gray-400 text-sm">No developers found</li>
-                ) : (
-                  filterList(developers, devQuery || '').map(dev => (
+                {developers.map(dev => (
                     <li
                       key={dev.id}
                       className={`px-4 py-2 cursor-pointer hover:bg-green-50 ${formData.developer_id === dev.id ? 'bg-green-100' : ''}`}
@@ -313,8 +297,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
                     >
                       {dev.name}
                     </li>
-                  ))
-                )}
+                ))}
               </ul>
             )}
           </div>
@@ -349,10 +332,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
             {/* Dropdown */}
             {showCityDropdown && (
               <ul className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow max-h-48 overflow-y-auto">
-                {filterList(cities, cityQuery || '').length === 0 ? (
-                  <li className="px-4 py-2 text-gray-400 text-sm">No cities found</li>
-                ) : (
-                  filterList(cities, cityQuery || '').map(city => (
+                {cities.map(city => (
                     <li
                       key={city.id}
                       className={`px-4 py-2 cursor-pointer hover:bg-green-50 ${formData.city_id === city.id ? 'bg-green-100' : ''}`}
@@ -366,8 +346,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
                     >
                       {city.name}
                     </li>
-                  ))
-                )}
+                ))}
               </ul>
             )}
           </div>
@@ -415,10 +394,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
             {/* Dropdown */}
             {showLocalityDropdown && formData.city_id && (
               <ul className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow max-h-48 overflow-y-auto">
-                {filterList(localities, localityQuery || '').length === 0 ? (
-                  <li className="px-4 py-2 text-gray-400 text-sm">No localities found</li>
-                ) : (
-                  filterList(localities, localityQuery || '').map(loc => (
+                {localities.map(loc => (
                     <li
                       key={loc.id}
                       className={`px-4 py-2 cursor-pointer hover:bg-green-50 ${formData.locality_id === loc.id ? 'bg-green-100' : ''}`}
@@ -431,8 +407,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
                     >
                       {loc.name}
                     </li>
-                  ))
-                )}
+                ))}
               </ul>
             )}
           </div>

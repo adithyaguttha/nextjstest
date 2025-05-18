@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../lib/AuthContext';
@@ -19,13 +18,7 @@ interface Developer {
   created_at: string;
 }
 
-interface DevMessage {
-  type: 'success' | 'error';
-  text: string;
-}
-
 export default function DevelopersPage() {
-  const router = useRouter();
   const { user } = useAuth();
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [devLoading, setDevLoading] = useState<boolean>(false);
@@ -77,8 +70,8 @@ export default function DevelopersPage() {
         .order('created_at', { ascending: false });
       if (error) throw error;
       setDevelopers((data as Developer[]) || []);
-    } catch (err) {
-      setDevError('Failed to load developers. Please try again.');
+    } catch {
+      setDevError('Failed to load developers');
     } finally {
       setDevLoading(false);
     }

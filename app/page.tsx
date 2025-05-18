@@ -84,7 +84,7 @@ export default function Home() {
             Find Your Dream Property
           </h1>
           <p className="text-lg sm:text-xl text-white mb-6 sm:mb-8 max-w-2xl mx-auto">
-            Discover the perfect home across India's top cities
+            Discover the perfect home across India&apos;s top cities
           </p>
           <div className="hero-search-container w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-2xl mx-auto">
           <SearchBox />

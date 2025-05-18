@@ -9,11 +9,10 @@ import MediaUpload from './components/MediaUpload';
 import ModelsPricing from './components/ModelsPricing';
 import AmenitiesFeatures from './components/AmenitiesFeatures';
 import ReviewSubmit from './components/ReviewSubmit';
-import { UserIcon, AcademicCapIcon, BriefcaseIcon, PhotoIcon, ClipboardDocumentListIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import { supabase } from '../../../lib/supabase';
 import { Toaster, toast } from 'react-hot-toast';
 import type { Amenity } from '../../components/AmenityMultiSelect';
 import { NavigationGuardProvider, useNavigationGuard } from './NavigationGuardProvider';
+import { supabase } from '../../../lib/supabase';
 
 // Define the project form data interface
 export interface ProjectFormData {
@@ -178,11 +177,11 @@ export function CreateProject() {
       }
     };
 
-    // @ts-ignore
+    // @ts-expect-error [reason: router.events is not typed in Next.js app router]
     router.events?.on('routeChangeStart', handleRouteChange);
 
     return () => {
-      // @ts-ignore
+      // @ts-expect-error [reason: router.events is not typed in Next.js app router]
       router.events?.off('routeChangeStart', handleRouteChange);
     };
   }, [hasUnsavedChanges, router]);
@@ -236,9 +235,6 @@ export function CreateProject() {
     setFormData(prev => ({ ...prev, ...data }));
     setHasUnsavedChanges(true);
   };
-
-  const totalSteps = 6;
-  const progressPercent = ((currentStep - 1) / (stepLabels.length - 1)) * 100;
 
   const handleNext = async () => {
     try {
@@ -335,7 +331,7 @@ export function CreateProject() {
       const locationPoint = `(${formData.location_coordinates.latitude},${formData.location_coordinates.longitude})`;
 
       // Prepare project data (excluding cover_image_url if not present)
-      const projectData: any = {
+      const projectData: Record<string, unknown> = {
         name: formData.name,
         developer_id: formData.developer_id,
         city_id: formData.city_id, 
@@ -514,7 +510,7 @@ export function CreateProject() {
           {/* Progress Fill */}
           <div
             className="absolute top-6 left-0 h-1 bg-green-500 rounded-full transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
+            style={{ width: `${((currentStep - 1) / (stepLabels.length - 1)) * 100}%` }}
           />
           <ol className="flex items-center justify-between w-full relative z-10">
             {stepLabels.map((step, idx) => {

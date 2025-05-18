@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../lib/AuthContext';
@@ -44,7 +43,6 @@ interface Message {
 }
 
 export default function CitiesPage() {
-  const router = useRouter();
   const { user } = useAuth();
   const [cities, setCities] = useState<City[]>([]);
   const [localities, setLocalities] = useState<Locality[]>([]);
@@ -97,6 +95,42 @@ export default function CitiesPage() {
     image_url: '',
   });
 
+  const fetchCities = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('cities')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setCities(data || []);
+    } catch (err) {
+      console.error('Error fetching cities:', err);
+      setError('Failed to load cities');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchLocalities = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('localities')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setLocalities(data || []);
+    } catch (err) {
+      console.error('Error fetching localities:', err);
+      setError('Failed to load localities');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchCities();
     fetchLocalities();
@@ -123,7 +157,7 @@ export default function CitiesPage() {
       // Clear the localStorage after reading
       localStorage.removeItem('localityTab');
     }
-  }, []);
+  }, [fetchCities, fetchLocalities, setActiveTab, setCityTab, setLocalityTab]);
 
   // Add click outside handler for state dropdown
   useEffect(() => {
@@ -134,7 +168,7 @@ export default function CitiesPage() {
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [setShowStateDropdown]);
 
   // Filter states based on search term
   const filteredStates = useMemo(() => {
@@ -143,36 +177,6 @@ export default function CitiesPage() {
       state.toLowerCase().includes(stateSearchTerm.toLowerCase())
     );
   }, [stateSearchTerm]);
-
-  const fetchCities = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error } = await supabase
-        .from('cities')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setCities((data as City[]) || []);
-    } catch (err) {
-      setError('Failed to load cities. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchLocalities = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('localities')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setLocalities((data as Locality[]) || []);
-    } catch (err) {
-      console.error('Failed to load localities:', err);
-    }
-  };
 
   const handleCityInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -556,7 +560,7 @@ export default function CitiesPage() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [message]);
+  }, [message, setShowToast, setMessage]);
 
   return (
     <div className="space-y-6">

@@ -1,13 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { ProjectFormData } from '../page';
 import { supabase } from '../../../../lib/supabase';
-import { ArrowRightIcon, ArrowLeftIcon, PlusIcon, TrashIcon, PhotoIcon, XMarkIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PhotoIcon, XMarkIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import BHKTypeDropdown from '../../../components/BHKTypeDropdown';
 import { toast } from 'react-hot-toast';
-
-const priceUnits = ['Rupees', 'Lakhs', 'Crores'];
+import Image from 'next/image';
 
 interface Model {
   bhk_type: string;
@@ -48,7 +46,7 @@ const emptyModel: Model = {
 interface ModelsPricingProps {
   formData: {
     models: Model[];
-    [key: string]: any;
+    [key: string]: unknown;
   };
   updateFormData: (data: Partial<{ models: Model[] }>) => void;
   onNext: () => void;
@@ -91,7 +89,7 @@ const ModelsPricing: React.FC<ModelsPricingProps> = ({ formData, updateFormData,
     }).format(amount);
   };
 
-  const validateModel = (model: any, index: number): ModelValidationErrors => {
+  const validateModel = (model: Model): ModelValidationErrors => {
     const modelErrors: ModelValidationErrors = {};
 
     if (!model.bhk_type?.trim()) {
@@ -147,7 +145,7 @@ const ModelsPricing: React.FC<ModelsPricingProps> = ({ formData, updateFormData,
     return modelErrors;
   };
 
-  const handleModelChange = (idx: number, field: string, value: any) => {
+  const handleModelChange = (idx: number, field: string, value: string | number) => {
     const updatedModels = formData.models.map((model, i) => {
       if (i === idx) {
         // Keep empty string values as is, only convert to number when needed
@@ -179,7 +177,7 @@ const ModelsPricing: React.FC<ModelsPricingProps> = ({ formData, updateFormData,
     }));
   };
 
-  const handleSpecChange = (idx: number, spec: string, value: any) => {
+  const handleSpecChange = (idx: number, spec: string, value: string | number) => {
     const updatedModels = formData.models.map((model, i) =>
       i === idx ? {
         ...model,
@@ -227,7 +225,7 @@ const ModelsPricing: React.FC<ModelsPricingProps> = ({ formData, updateFormData,
     const newExpandedModels = { ...expandedModels };
     delete newExpandedModels[idx];
     // Shift all expansion states down by one for models after the removed one
-    const updatedExpandedModels = Object.keys(newExpandedModels).reduce((acc, key) => {
+    const updatedExpandedModels = Object.keys(newExpandedModels).reduce<{ [key: number]: boolean }>((acc, key) => {
       const numKey = parseInt(key);
       if (numKey > idx) {
         acc[numKey - 1] = newExpandedModels[numKey];
@@ -235,7 +233,7 @@ const ModelsPricing: React.FC<ModelsPricingProps> = ({ formData, updateFormData,
         acc[numKey] = newExpandedModels[numKey];
       }
       return acc;
-    }, {} as { [key: number]: boolean });
+    }, {});
     setExpandedModels(updatedExpandedModels);
     updateFormData({ models: formData.models.filter((_, i) => i !== idx) });
   };
@@ -244,10 +242,10 @@ const ModelsPricing: React.FC<ModelsPricingProps> = ({ formData, updateFormData,
     const newErrors: { [key: number]: ModelValidationErrors } = {};
     let hasErrors = false;
 
-    formData.models.forEach((model, index) => {
-      const modelErrors = validateModel(model, index);
+    formData.models.forEach((model, idx) => {
+      const modelErrors = validateModel(model);
       if (Object.keys(modelErrors).length > 0) {
-        newErrors[index] = modelErrors;
+        newErrors[idx] = modelErrors;
         hasErrors = true;
       }
     });
@@ -283,10 +281,10 @@ const ModelsPricing: React.FC<ModelsPricingProps> = ({ formData, updateFormData,
     // Try to get projectId from props, modelId if available, fallback to bhk_type
     const project = projectId || 'unknown-project';
     const model = formData.models[idx];
-    const modelId = (model as any).id || model.bhk_type || `model${idx+1}`;
+    const modelId = (model as unknown as { id?: string })?.id || model.bhk_type || `model${idx+1}`;
     const fileName = `floorplan-${Date.now()}.${ext}`;
     const filePath = `${project}/${modelId}/${fileName}`;
-    const { data, error } = await supabase.storage.from('floorplans').upload(filePath, file, { upsert: true });
+    const { error } = await supabase.storage.from('floorplans').upload(filePath, file, { upsert: true });
     if (error) {
       setUploadError('Failed to upload image.');
       setUploadingIdx(null);
@@ -488,7 +486,7 @@ const ModelsPricing: React.FC<ModelsPricingProps> = ({ formData, updateFormData,
                     <label className="block text-xs font-medium text-gray-700 mb-1">Floor Plan Image</label>
                     {model.floor_plan_url ? (
                       <div className="flex items-center gap-4 mb-2">
-                        <img src={model.floor_plan_url} alt="Floor Plan" className="w-32 h-24 object-contain rounded border" />
+                        <Image src={model.floor_plan_url} alt="Floor Plan" className="w-32 h-24 object-contain rounded border" width={128} height={96} />
                         <button
                           type="button"
                           className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-xs"

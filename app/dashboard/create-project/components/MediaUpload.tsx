@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { PhotoIcon, XMarkIcon, PlusIcon, FolderIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../../../../lib/supabase';
 import { toast } from 'react-hot-toast';
+import Image from 'next/image';
 
 interface MediaUploadProps {
   formData: {
@@ -19,7 +20,7 @@ interface MediaUploadProps {
     }>;
     storage_folder?: string;
   };
-  updateFormData: (data: Partial<any>) => void;
+  updateFormData: (data: Partial<unknown>) => void;
   onNext: () => void;
   onBack: () => void;
 }
@@ -54,6 +55,8 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
   const [activeCategory, setActiveCategory] = useState(imageCategories[0]);
   const [projectStorageFolder, setProjectStorageFolder] = useState(formData.storage_folder || '');
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimeout = React.useRef<NodeJS.Timeout | null>(null);
 
   // Initialize project folder using project name
   React.useEffect(() => {
@@ -69,6 +72,16 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
       updateFormData({ storage_folder: folder });
     }
   }, [projectStorageFolder, formData.name, updateFormData]);
+
+  useEffect(() => {
+    if (toastMessage) {
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToastMessage(null), 3500);
+    }
+    return () => {
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+    };
+  }, [toastMessage, setToastMessage]);
 
   const validateFile = (file: File, allowedTypes: string[] = ALLOWED_IMAGE_TYPES) => {
     if (!allowedTypes.includes(file.type)) {
@@ -433,10 +446,12 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
           <div className="text-center">
             {formData.cover_image_url ? (
               <div className="relative">
-                <img
+                <Image
                   src={formData.cover_image_url}
                   alt="Cover"
                   className="mx-auto h-32 w-auto object-cover rounded-lg"
+                  width={1280}
+                  height={720}
                 />
                 <button
                   type="button"
@@ -586,10 +601,12 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
             .filter(img => img.category === activeCategory)
             .map((image, index) => (
               <div key={index} className="relative group">
-                <img
+                <Image
                   src={image.url}
                   alt={`${activeCategory} ${index + 1}`}
                   className="h-32 w-full object-cover rounded-lg"
+                  width={1280}
+                  height={720}
                 />
                 <button
                   type="button"

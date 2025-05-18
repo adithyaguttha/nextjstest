@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../../lib/supabase';
 import type { ProjectFormData } from '../page';
 import { CheckCircleIcon } from '@heroicons/react/24/solid';
+import Image from 'next/image';
 
 interface ReviewSubmitProps {
   formData: ProjectFormData;
@@ -28,8 +29,7 @@ export default function ReviewSubmit({ formData, onSubmit, onBack, loading }: Re
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [submissionStage, setSubmissionStage] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchReferenceData = async () => {
+  const fetchReferenceData = useCallback(async () => {
       try {
         // Fetch developer
         const { data: developer } = await supabase
@@ -60,10 +60,11 @@ export default function ReviewSubmit({ formData, onSubmit, onBack, loading }: Re
       } catch (error) {
         console.error('Error fetching reference data:', error);
       }
-    };
+  }, [formData.developer_id, formData.city_id, formData.locality_id]);
 
+  useEffect(() => {
     fetchReferenceData();
-  }, [formData]);
+  }, [fetchReferenceData]);
 
   const getDeveloperName = () => {
     return referenceData.developer?.name || 'Unknown Developer';
@@ -191,8 +192,8 @@ export default function ReviewSubmit({ formData, onSubmit, onBack, loading }: Re
             <dd className="mt-1 text-sm text-gray-900">
               {(() => {
                 const { min, max, currency } = formData.price_range;
-                const min_unit = (formData.price_range as any).min_unit || '';
-                const max_unit = (formData.price_range as any).max_unit || '';
+                const min_unit = formData.price_range.min_unit || '';
+                const max_unit = formData.price_range.max_unit || '';
                 if (min && max) {
                   return `${currency} ${min}${min_unit ? ' ' + min_unit : ''} - ${max}${max_unit ? ' ' + max_unit : ''}`;
                 } else if (min) {
@@ -216,10 +217,12 @@ export default function ReviewSubmit({ formData, onSubmit, onBack, loading }: Re
           <div>
             <dt className="text-sm font-medium text-gray-500 mb-2">Cover Image</dt>
             {formData.cover_image_url ? (
-              <img 
+              <Image 
                 src={formData.cover_image_url} 
                 alt="Cover" 
-                className="w-full h-60 object-cover rounded-lg"
+                width={320}
+                height={160}
+                className="rounded-lg w-full h-40 object-cover"
               />
             ) : (
               <div className="text-sm text-gray-500">No cover image provided</div>
@@ -255,9 +258,11 @@ export default function ReviewSubmit({ formData, onSubmit, onBack, loading }: Re
                       .filter(img => img.category === category)
                       .map((image, index) => (
                         <div key={index} className="relative">
-                          <img
+                          <Image
                             src={image.url}
                             alt={`${category} ${index + 1}`}
+                            width={320}
+                            height={160}
                             className="h-24 w-full object-cover rounded-lg"
                           />
                         </div>
@@ -363,9 +368,11 @@ export default function ReviewSubmit({ formData, onSubmit, onBack, loading }: Re
                 <div className="sm:col-span-2">
                   <dt className="text-sm font-medium text-gray-500">Floor Plan</dt>
                   <dd className="mt-1">
-                    <img 
+                    <Image 
                       src={model.floor_plan_url} 
                       alt={`Floor Plan for ${model.bhk_type}`} 
+                      width={320}
+                      height={160}
                       className="h-40 object-contain border rounded"
                     />
                   </dd>

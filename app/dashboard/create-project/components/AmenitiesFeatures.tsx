@@ -30,7 +30,7 @@ const AmenitiesFeatures: React.FC<AmenitiesFeaturesProps> = ({
             Project Amenities (Optional)
           </h2>
           <p className="text-sm text-gray-500">
-            Search and select the amenities that will be available in your project. You can skip this step if your project doesn't have any amenities.
+            Search and select the amenities that will be available in your project. You can skip this step if your project doesn&apos;t have any amenities.
           </p>
         </div>
         

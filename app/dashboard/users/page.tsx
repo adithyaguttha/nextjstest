@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 interface Profile {
   id: string;
@@ -23,27 +23,25 @@ export default function UsersPage() {
   const [showViewedProjectsModal, setShowViewedProjectsModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const supabase = createClientComponentClient();
-  const router = useRouter();
 
   useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setUsers(data || []);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setUsers(data || []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [supabase]);
 
   const filteredUsers = users.filter(user => {
     const searchLower = searchQuery.toLowerCase();
@@ -146,10 +144,12 @@ export default function UsersPage() {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
                           {user.avatar_url ? (
-                            <img
-                              className="h-10 w-10 rounded-full"
+                            <Image
                               src={user.avatar_url}
                               alt={user.name || user.email || 'User'}
+                              width={40}
+                              height={40}
+                              className="h-10 w-10 rounded-full"
                             />
                           ) : (
                             <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
@@ -231,9 +231,11 @@ export default function UsersPage() {
               <div className="space-y-4">
                 <div className="flex items-center space-x-4">
                   {selectedUser.avatar_url ? (
-                    <img
+                    <Image
                       src={selectedUser.avatar_url}
                       alt={selectedUser.name || selectedUser.email || 'User'}
+                      width={80}
+                      height={80}
                       className="h-20 w-20 rounded-full"
                     />
                   ) : (
