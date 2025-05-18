@@ -40,7 +40,7 @@ export default function UsersPage() {
       }
     };
     fetchUsers();
-  }, [supabase]);
+  }, []);
 
   const filteredUsers = users.filter(user => {
     const searchLower = searchQuery.toLowerCase();
