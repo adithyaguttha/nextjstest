@@ -14,6 +14,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const isHomePage = pathname === '/';
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -34,13 +35,15 @@ export default function Navbar() {
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      setIsScrolled(scrollPosition > 0);
+      if (isHomePage) {
+        const scrollPosition = window.scrollY;
+        setIsScrolled(scrollPosition > 0);
+      }
     };
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isHomePage]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -94,11 +97,11 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Search Bar - Shows on scroll */}
+          {/* Search Bar - Conditional visibility based on page */}
           <div className={`hidden md:flex flex-1 max-w-md mx-8 transition-all duration-300 ease-in-out transform ${
-            isScrolled 
-              ? 'opacity-100 translate-y-0' 
-              : 'opacity-0 -translate-y-2 pointer-events-none'
+            isHomePage 
+              ? (isScrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none')
+              : 'opacity-100 translate-y-0'
           }`}>
             <div className="relative w-full">
               <input
