@@ -31,14 +31,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initialized, setInitialized] = useState(false);
   const router = useRouter();
 
-  // Initialize auth state
+  // Initialize auth state with retry logic
   useEffect(() => {
     let mounted = true;
+    let retryCount = 0;
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1 second
 
     const initializeAuth = async () => {
       try {
-        // Get initial session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        // Clear any stale session data first
+        const { error: clearError } = await supabase.auth.getSession();
+        if (clearError) {
+          console.error('Error clearing stale session:', clearError);
+        }
+
+        // Get initial session with retry logic
+        const getSessionWithRetry = async () => {
+          try {
+            const result = await supabase.auth.getSession();
+            return result;
+          } catch (err) {
+            if (retryCount < maxRetries) {
+              retryCount++;
+              console.log(`Retrying session fetch (${retryCount}/${maxRetries})...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+              return getSessionWithRetry();
+            }
+            throw err;
+          }
+        };
+
+        const { data: { session }, error: sessionError } = await getSessionWithRetry();
         
         if (sessionError) {
           console.error('Error getting session:', sessionError);
@@ -52,28 +76,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user && mounted) {
           try {
             // Fetch user profile with retry logic
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('is_admin, avatar_url, name')
-              .eq('id', session.user.id)
-              .single();
+            const getProfileWithRetry = async () => {
+              try {
+                const { data, error } = await supabase
+                  .from('profiles')
+                  .select('is_admin, avatar_url, name')
+                  .eq('id', session.user.id)
+                  .single();
+                
+                if (error) throw error;
+                return data;
+              } catch (err) {
+                if (retryCount < maxRetries) {
+                  retryCount++;
+                  console.log(`Retrying profile fetch (${retryCount}/${maxRetries})...`);
+                  await new Promise(resolve => setTimeout(resolve, retryDelay));
+                  return getProfileWithRetry();
+                }
+                throw err;
+              }
+            };
 
-            if (profileError) {
-              console.error('Error fetching profile:', profileError);
-              // Continue with sign in even if profile fetch fails
+            const profile = await getProfileWithRetry();
+
+            // Ensure we have the latest session
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            if (!currentSession) {
+              throw new Error('Session expired during initialization');
             }
 
-            setUser({
-              id: session.user.id,
-              email: session.user.email!,
-              name: profile?.name || session.user.user_metadata.name,
-              created_at: session.user.created_at,
-              is_admin: profile?.is_admin || false,
-              avatar_url: profile?.avatar_url,
-            });
+            if (mounted) {
+              setUser({
+                id: currentSession.user.id,
+                email: currentSession.user.email!,
+                name: profile?.name || currentSession.user.user_metadata.name,
+                created_at: currentSession.user.created_at,
+                is_admin: profile?.is_admin || false,
+                avatar_url: profile?.avatar_url,
+              });
+            }
           } catch (err) {
             console.error('Error setting up user:', err);
-            // Don't set error here, just log it
+            // Don't set error here to prevent UI disruption
             // This allows the user to still be logged in even if profile fetch fails
           }
         }
@@ -92,46 +136,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth();
 
-    // Set up auth state change listener
+    // Set up auth state change listener with debounce
+    let authChangeTimeout: NodeJS.Timeout;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
-      try {
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setError(null);
-          // Clear any sensitive data
-          localStorage.removeItem('supabase.auth.token');
-        } else if (session?.user) {
-          // Fetch fresh profile data on auth state change
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin, avatar_url, name')
-            .eq('id', session.user.id)
-            .single();
+      // Clear any pending auth change
+      clearTimeout(authChangeTimeout);
 
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            name: profile?.name || session.user.user_metadata.name,
-            created_at: session.user.created_at,
-            is_admin: profile?.is_admin || false,
-            avatar_url: profile?.avatar_url,
-          });
-          setError(null);
+      // Debounce auth state changes
+      authChangeTimeout = setTimeout(async () => {
+        try {
+          if (event === 'SIGNED_OUT') {
+            setUser(null);
+            setError(null);
+            // Clear all auth-related storage
+            localStorage.removeItem('supabase.auth.token');
+            sessionStorage.removeItem('supabase.auth.token');
+            // Clear any auth-related cookies
+            document.cookie.split(";").forEach(cookie => {
+              if (cookie.trim().startsWith('sb-')) {
+                document.cookie = cookie.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+              }
+            });
+          } else if (session?.user) {
+            // Verify session is still valid
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            if (!currentSession) {
+              setUser(null);
+              return;
+            }
+
+            // Fetch fresh profile data
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('is_admin, avatar_url, name')
+              .eq('id', session.user.id)
+              .single();
+
+            if (mounted) {
+              setUser({
+                id: currentSession.user.id,
+                email: currentSession.user.email!,
+                name: profile?.name || currentSession.user.user_metadata.name,
+                created_at: currentSession.user.created_at,
+                is_admin: profile?.is_admin || false,
+                avatar_url: profile?.avatar_url,
+              });
+              setError(null);
+            }
+          }
+        } catch (err) {
+          console.error('Auth state change error:', err);
+          // Don't set error here to prevent UI disruption
+        } finally {
+          if (mounted) {
+            setLoading(false);
+          }
         }
-      } catch (err) {
-        console.error('Auth state change error:', err);
-        // Don't set error here to prevent UI disruption
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
+      }, 100); // 100ms debounce
     });
 
     return () => {
       mounted = false;
+      clearTimeout(authChangeTimeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -322,34 +390,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       setLoading(true);
 
-      // First clear the user state to prevent any race conditions
+      // First clear the user state
       setUser(null);
 
-      // Clear all local storage items that might contain session data
-      localStorage.clear(); // Clear all local storage instead of just one item
-      sessionStorage.clear(); // Also clear session storage
+      // Clear all storage
+      localStorage.clear();
+      sessionStorage.clear();
 
-      // Sign out from Supabase and wait for it to complete
+      // Clear all cookies
+      document.cookie.split(";").forEach(cookie => {
+        document.cookie = cookie.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+
+      // Sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
-      // Small delay to ensure all cleanup is complete
+      // Small delay to ensure cleanup
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Clear any cookies that might contain session data
-      document.cookie.split(";").forEach(function(c) { 
-        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-      });
-
-      // Use replace instead of push to prevent back navigation
-      router.replace('/');
-
-      // Force a hard refresh after a small delay to ensure all cleanup is done
-      setTimeout(() => {
-        // Clear any remaining session data
-        window.location.replace('/');
-      }, 100);
-
+      // Force a hard refresh
+      window.location.href = '/';
     } catch (err) {
       console.error('Sign out error:', err);
       setError({ message: (err as Error).message });
@@ -358,18 +419,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       localStorage.clear();
       sessionStorage.clear();
-      
-      // Clear cookies
-      document.cookie.split(";").forEach(function(c) { 
-        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      document.cookie.split(";").forEach(cookie => {
+        document.cookie = cookie.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
 
-      router.replace('/');
-      
       // Force refresh even on error
-      setTimeout(() => {
-        window.location.replace('/');
-      }, 100);
+      window.location.href = '/';
     } finally {
       setLoading(false);
     }
