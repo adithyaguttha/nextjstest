@@ -25,29 +25,35 @@ function AuthPageInner() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // All hooks must be called before any return/conditional
-  useEffect(() => {
-    if (user !== null) {
-      router.push('/');
-    }
-  }, [user, router]);
-
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && tab !== activeTab) {
-      setActiveTab(tab);
-      setErrors({});
-    }
-  }, [searchParams, activeTab]);
-
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab);
     router.push(`/auth?tab=${tab}`);
     setErrors({});
   }, [router]);
 
+  // Handle auth state changes
+  useEffect(() => {
+    if (!loading && user) {
+      // If we have a user and we're not loading, redirect to home
+      router.replace('/');
+    }
+  }, [user, loading, router]);
+
+  // Handle tab changes
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+      setErrors({});
+      setFormData(prev => ({ ...prev, password: '', confirmPassword: '' })); // Clear passwords on tab change
+    }
+  }, [searchParams, activeTab]);
+
+  // Handle auth errors
   useEffect(() => {
     if (authError) {
+      setIsSubmitting(false); // Reset submitting state on error
+      
       if (authError.message.includes('already exists')) {
         toast.error(`An account with email ${formData.email} already exists. Please login instead.`);
         handleTabChange('login');
@@ -66,9 +72,21 @@ function AuthPageInner() {
     }
   }, [authError, formData.email, handleTabChange]);
 
-  // Now you can conditionally render
-  if (user === undefined) {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+  // Show loading state only during initial auth check
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If we're not loading and have a user, don't render the auth form
+  if (user) {
+    return null; // The useEffect above will handle the redirect
   }
 
   const validateForm = (isLogin: boolean) => {

@@ -28,56 +28,112 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AuthError | null>(null);
+  const [initialized, setInitialized] = useState(false);
   const router = useRouter();
 
+  // Initialize auth state
   useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        // Fetch user profile to get is_admin status and avatar_url
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin, avatar_url')
-          .eq('id', session.user.id)
-          .single();
+    let mounted = true;
 
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          name: session.user.user_metadata.name,
-          created_at: session.user.created_at,
-          is_admin: profile?.is_admin || false,
-          avatar_url: profile?.avatar_url,
-        });
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Error getting session:', sessionError);
+          if (mounted) {
+            setError({ message: 'Failed to restore session. Please try logging in again.' });
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (session?.user && mounted) {
+          try {
+            // Fetch user profile with retry logic
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('is_admin, avatar_url, name')
+              .eq('id', session.user.id)
+              .single();
+
+            if (profileError) {
+              console.error('Error fetching profile:', profileError);
+              // Continue with sign in even if profile fetch fails
+            }
+
+            setUser({
+              id: session.user.id,
+              email: session.user.email!,
+              name: profile?.name || session.user.user_metadata.name,
+              created_at: session.user.created_at,
+              is_admin: profile?.is_admin || false,
+              avatar_url: profile?.avatar_url,
+            });
+          } catch (err) {
+            console.error('Error setting up user:', err);
+            // Don't set error here, just log it
+            // This allows the user to still be logged in even if profile fetch fails
+          }
+        }
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        if (mounted) {
+          setError({ message: 'Failed to initialize authentication. Please refresh the page.' });
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+          setInitialized(true);
+        }
       }
-      setLoading(false);
+    };
+
+    initializeAuth();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
+      try {
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setError(null);
+          // Clear any sensitive data
+          localStorage.removeItem('supabase.auth.token');
+        } else if (session?.user) {
+          // Fetch fresh profile data on auth state change
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin, avatar_url, name')
+            .eq('id', session.user.id)
+            .single();
+
+          setUser({
+            id: session.user.id,
+            email: session.user.email!,
+            name: profile?.name || session.user.user_metadata.name,
+            created_at: session.user.created_at,
+            is_admin: profile?.is_admin || false,
+            avatar_url: profile?.avatar_url,
+          });
+          setError(null);
+        }
+      } catch (err) {
+        console.error('Auth state change error:', err);
+        // Don't set error here to prevent UI disruption
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     });
 
-    // Listen for changes on auth state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        // Fetch user profile to get is_admin status and avatar_url
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin, avatar_url')
-          .eq('id', session.user.id)
-          .single();
-
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          name: session.user.user_metadata.name,
-          created_at: session.user.created_at,
-          is_admin: profile?.is_admin || false,
-          avatar_url: profile?.avatar_url,
-        });
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -320,7 +376,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading: loading || !initialized, // Only show loading if not initialized
+      error, 
+      signIn, 
+      signUp, 
+      signOut 
+    }}>
       {children}
     </AuthContext.Provider>
   );
