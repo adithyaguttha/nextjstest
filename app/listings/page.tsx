@@ -8,7 +8,7 @@ import ContactModal from '@/components/ContactModal';
 import { Toaster } from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
 
-// Update Project type to match database response
+// Update Project type to include models
 type Project = {
   id: string;
   name: string;
@@ -65,6 +65,10 @@ type Project = {
     name: string;
     phone: string;
   };
+  models?: {
+    bhk_type: string;
+    availability_status: 'available' | 'sold_out' | 'coming_soon';
+  }[];
 };
 
 // Type for raw database response
@@ -142,7 +146,8 @@ export default function ListingsPage() {
             rera_id,
             video_url,
             slug,
-            developer_name
+            developer_name,
+            models:project_models(bhk_type, availability_status)
           `)
           .eq('is_active', true)
           .order('created_at', { ascending: false });
@@ -293,206 +298,122 @@ export default function ListingsPage() {
       {/* Header with Search and Filters - Sticky below navbar */}
       <div className="bg-white shadow-sm sticky top-16 z-40 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-gray-900">Available Projects</h1>
-              {filteredProjects.length !== allProjects.length && (
-                <span className="text-sm text-gray-500">
-                  ({filteredProjects.length} of {allProjects.length} projects)
-                </span>
-              )}
-            </div>
-            
-            <div className="flex gap-4 w-full sm:w-auto">
-              {/* Search Bar */}
-              <div className="relative flex-1 sm:flex-none">
+          <div className="flex gap-3 items-center overflow-x-auto">
+            {/* Search Bar */}
+            <div className="flex-shrink-0 w-full max-w-xs">
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="Search by name, location, developer..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#044ca3] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#044ca3] focus:border-transparent"
                 />
                 <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               </div>
-
-              {/* Filter Button */}
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            </div>
+            {/* Filters Row */}
+            <div className="flex gap-2 items-center flex-1 min-w-0 overflow-x-auto">
+              {/* Property Type */}
+              <select
+                multiple
+                value={filters.propertyType}
+                onChange={(e) => setFilters(prev => ({
+                  ...prev,
+                  propertyType: Array.from(e.target.selectedOptions, option => option.value)
+                }))}
+                className="min-w-[120px] px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700"
               >
-                <FiFilter />
-                <span>Filters</span>
+                <option value="apartment">Property Type</option>
+                <option value="apartment">Apartment</option>
+                <option value="house">House</option>
+                <option value="villa">Villa</option>
+                <option value="plot">Plot</option>
+              </select>
+              {/* BHK Type */}
+              <select
+                multiple
+                value={filters.bedrooms}
+                onChange={(e) => setFilters(prev => ({
+                  ...prev,
+                  bedrooms: Array.from(e.target.selectedOptions, option => option.value)
+                }))}
+                className="min-w-[100px] px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700"
+              >
+                <option value="">BHK Type</option>
+                <option value="1">1 BHK</option>
+                <option value="2">2 BHK</option>
+                <option value="3">3 BHK</option>
+                <option value="4">4 BHK</option>
+                <option value="5">5+ BHK</option>
+              </select>
+              {/* Price Range */}
+              <div className="flex items-center min-w-[120px] border border-gray-300 rounded-md bg-white px-2 py-2">
+                <span className="text-gray-500 mr-1">₹</span>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={filters.priceRange[0]}
+                  onChange={(e) => setFilters(prev => ({
+                    ...prev,
+                    priceRange: [Number(e.target.value), prev.priceRange[1]]
+                  }))}
+                  className="w-12 px-1 py-0.5 border-none focus:ring-0 text-gray-700 text-sm bg-transparent"
+                />
+                <span className="mx-1 text-gray-400">-</span>
+                <input
+                  type="number"
+                  placeholder="5Cr"
+                  value={filters.priceRange[1]}
+                  onChange={(e) => setFilters(prev => ({
+                    ...prev,
+                    priceRange: [prev.priceRange[0], Number(e.target.value)]
+                  }))}
+                  className="w-12 px-1 py-0.5 border-none focus:ring-0 text-gray-700 text-sm bg-transparent"
+                />
+              </div>
+              {/* Sale Type */}
+              <select
+                className="min-w-[110px] px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700"
+              >
+                <option>Sale Type</option>
+                <option>Primary</option>
+                <option>Resale</option>
+              </select>
+              {/* Construction Status */}
+              <select
+                multiple
+                value={filters.status}
+                onChange={(e) => setFilters(prev => ({
+                  ...prev,
+                  status: Array.from(e.target.selectedOptions, option => option.value)
+                }))}
+                className="min-w-[140px] px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700"
+              >
+                <option value="">Construction Status</option>
+                <option value="Ready to Move">Ready to Move</option>
+                <option value="Under Construction">Under Construction</option>
+                <option value="Not Started">Not Started</option>
+                <option value="Completed">Completed</option>
+              </select>
+              {/* Verified */}
+              <button className="min-w-[90px] px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700 flex items-center gap-1">
+                Verified <span className="text-xs">i</span>
+              </button>
+              {/* Project */}
+              <button className="min-w-[80px] px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700">
+                Project
+              </button>
+              {/* Expert Pro Agents */}
+              <button className="min-w-[150px] px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700 flex items-center gap-1">
+                <span className="text-red-500">★</span> Expert Pro Agents
+              </button>
+              {/* More Filters */}
+              <button className="min-w-[120px] px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-700">
+                More Filters ▼
               </button>
             </div>
           </div>
-
-          {/* Filter Panel */}
-          {showFilters && (
-            <div className="mt-4 p-4 border border-gray-200 rounded-md bg-white">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Price Range */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price Range
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      placeholder="Min"
-                      value={filters.priceRange[0]}
-                      onChange={(e) => setFilters(prev => ({
-                        ...prev,
-                        priceRange: [Number(e.target.value), prev.priceRange[1]]
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Max"
-                      value={filters.priceRange[1]}
-                      onChange={(e) => setFilters(prev => ({
-                        ...prev,
-                        priceRange: [prev.priceRange[0], Number(e.target.value)]
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  </div>
-                </div>
-
-                {/* Property Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Property Type
-                  </label>
-                  <select
-                    multiple
-                    value={filters.propertyType}
-                    onChange={(e) => setFilters(prev => ({
-                      ...prev,
-                      propertyType: Array.from(e.target.selectedOptions, option => option.value)
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="apartment">Apartment</option>
-                    <option value="house">House</option>
-                    <option value="villa">Villa</option>
-                    <option value="plot">Plot</option>
-                  </select>
-                </div>
-
-                {/* Bedrooms */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Bedrooms
-                  </label>
-                  <select
-                    multiple
-                    value={filters.bedrooms}
-                    onChange={(e) => setFilters(prev => ({
-                      ...prev,
-                      bedrooms: Array.from(e.target.selectedOptions, option => option.value)
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="1">1 BHK</option>
-                    <option value="2">2 BHK</option>
-                    <option value="3">3 BHK</option>
-                    <option value="4">4 BHK</option>
-                    <option value="5">5+ BHK</option>
-                  </select>
-                </div>
-
-                {/* Location */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Location
-                  </label>
-                  <select
-                    multiple
-                    value={filters.location}
-                    onChange={(e) => setFilters(prev => ({
-                      ...prev,
-                      location: Array.from(e.target.selectedOptions, option => option.value)
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="north">North Bangalore</option>
-                    <option value="south">South Bangalore</option>
-                    <option value="east">East Bangalore</option>
-                    <option value="west">West Bangalore</option>
-                    <option value="central">Central Bangalore</option>
-                  </select>
-                </div>
-
-                {/* City */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    City
-                  </label>
-                  <select
-                    multiple
-                    value={filters.city}
-                    onChange={(e) => setFilters(prev => ({
-                      ...prev,
-                      city: Array.from(e.target.selectedOptions, option => option.value)
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    {cities.map(city => (
-                      <option key={city.id} value={city.id}>
-                        {city.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Status */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    multiple
-                    value={filters.status}
-                    onChange={(e) => setFilters(prev => ({
-                      ...prev,
-                      status: Array.from(e.target.selectedOptions, option => option.value)
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="Ready to Move">Ready to Move</option>
-                    <option value="Under Construction">Under Construction</option>
-                    <option value="Not Started">Not Started</option>
-                    <option value="Completed">Completed</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Filter Actions */}
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  onClick={() => setFilters({
-                    priceRange: [0, 100000000],
-                    propertyType: [],
-                    bedrooms: [],
-                    location: [],
-                    city: [],
-                    status: [],
-                  })}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                >
-                  Reset
-                </button>
-                <button
-                  onClick={() => setShowFilters(false)}
-                  className="px-4 py-2 bg-[#044ca3] text-white rounded-md hover:bg-[#033b7d] transition-colors"
-                >
-                  Apply Filters
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
