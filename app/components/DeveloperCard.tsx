@@ -1,6 +1,6 @@
 import Image from 'next/image';
 
-type Developer = {
+export type Developer = {
   id: string;
   name: string;
   logo_url: string | null;

@@ -86,10 +86,6 @@ export default function OverlayProjectCard({
 
   return (
     <div className="relative rounded-lg overflow-hidden shadow group h-72">
-      {/* Top left Featured tag */}
-      <div className="absolute top-3 left-3 z-20">
-        <span className="bg-yellow-500 text-white px-2 py-0.5 rounded text-xs font-semibold shadow">Featured</span>
-      </div>
       {/* Top right icons */}
       <div className="absolute top-3 right-3 flex flex-col gap-2 z-20">
         {/* Heart Icon with Tooltip */}
@@ -150,8 +146,8 @@ export default function OverlayProjectCard({
         <div className="absolute bottom-0 left-0 w-full p-5 flex flex-row justify-between items-end z-10">
           {/* Left: Project info */}
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-bold text-white mb-1 drop-shadow">{project.name}</h3>
-            <div className="text-gray-200 text-xs mb-2 drop-shadow">by {project.developer?.name || 'Unknown Developer'}</div>
+            <h3 className="text-lg font-bold text-white mb-1 truncate drop-shadow">{project.name}</h3>
+            <div className="text-gray-200 text-xs mb-2 truncate drop-shadow">by {project.developer?.name || 'Unknown Developer'}</div>
             {bhkPropertyString && (
               <div className="text-sm font-medium text-white mb-1 drop-shadow">{bhkPropertyString}</div>
             )}

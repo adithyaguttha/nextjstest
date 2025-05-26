@@ -304,7 +304,7 @@ export default function ListingCard({ project, projectImages, localityName, city
       <div className="p-3.5 flex flex-col flex-grow">
         {/* Project Name and RERA Badge */}
         <div className="mb-2 flex items-center gap-2">
-          <h3 className="text-[15px] font-semibold text-gray-900 flex-1">{project.name}</h3>
+          <h3 className="text-[15px] font-semibold text-gray-900 line-clamp-1 flex-1">{project.name}</h3>
           {project.rera_verified && project.rera_id && (
             <span
               className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-semibold cursor-pointer relative group flex-shrink-0"
@@ -359,7 +359,7 @@ export default function ListingCard({ project, projectImages, localityName, city
 
           {/* Developer Info */}
           <div className="border-t border-gray-100 pt-2.5 mb-2.5">
-            <p className="text-[13px] text-gray-600">By {getDeveloperName()}</p>
+            <p className="text-[13px] text-gray-600 line-clamp-1">By {getDeveloperName()}</p>
           </div>
 
           {/* Action Buttons */}

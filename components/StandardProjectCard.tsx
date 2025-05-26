@@ -1,6 +1,6 @@
 import { Project } from '@/types/project';
-import { useState, useCallback, useRef } from 'react';
-import { FiChevronLeft, FiChevronRight, FiPhone, FiShare2 } from 'react-icons/fi';
+import { useState, useCallback } from 'react';
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import Image from 'next/image';
 
 interface StandardProjectCardProps {
@@ -74,63 +74,15 @@ export default function StandardProjectCard({
     return `₹${price}${unit ? ' ' + unit : ''}`;
   };
 
-  const shareRef = useRef<HTMLDivElement>(null);
-  const [showShare, setShowShare] = useState(false);
-  const shareUrl = typeof window !== 'undefined' ? window.location.origin + '/project/' + project.id : '';
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(shareUrl);
-    setShowShare(false);
-  };
-
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
+    <div className="bg-white rounded-lg shadow overflow-hidden">
       {/* Image section with carousel */}
       <div 
-        className="relative w-full h-56 sm:h-64 bg-gray-100 flex items-center justify-center"
+        className="relative w-full h-64 bg-gray-100 flex items-center justify-center"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {/* Top right action buttons */}
-        <div className="absolute top-3 right-3 flex flex-col gap-2 z-20">
-          {project.developer?.phone && (
-            <a
-              href={`tel:${project.developer.phone}`}
-              className="text-white bg-black/40 hover:bg-black/60 rounded-full p-2 transition-colors"
-              title="Call Developer"
-              onClick={e => e.stopPropagation()}
-            >
-              <FiPhone className="w-5 h-5" />
-            </a>
-          )}
-          {/* Share Button */}
-          <div className="relative" ref={shareRef}>
-            <button
-              className="text-white bg-black/40 hover:bg-black/60 rounded-full p-2 transition-colors"
-              title="Share"
-              onClick={e => { e.stopPropagation(); setShowShare(v => !v); }}
-            >
-              <FiShare2 className="w-5 h-5" />
-            </button>
-            {showShare && (
-              <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 w-40 bg-white rounded-lg shadow-lg border border-gray-100 p-3 z-30 flex flex-col gap-2 animate-fade-in">
-                <button
-                  className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-50 text-gray-700"
-                  onClick={handleCopyLink}
-                >
-                  <FiShare2 className="w-4 h-4" /> Copy Link
-                </button>
-                <button
-                  className="absolute top-1 right-1 p-1 text-gray-400 hover:text-gray-600"
-                  onClick={() => setShowShare(false)}
-                  title="Close"
-                >
-                  ×
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
         {allImages.length > 0 && (
           <Image
             src={allImages[currentImage]}
@@ -160,24 +112,25 @@ export default function StandardProjectCard({
         )}
       </div>
       {/* Details section */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-5 gap-2 sm:gap-0">
+      <div className="flex flex-row justify-between items-start p-5">
         {/* Left: Project info */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">{project.name}</h3>
-          <div className="text-gray-500 text-xs sm:text-sm mb-2">by {project.developer?.name || 'Unknown Developer'}</div>
+          <h3 className="text-xl font-bold text-gray-900 mb-1 truncate">{project.name}</h3>
+          <div className="text-gray-500 text-sm mb-3 truncate">by {project.developer?.name || 'Unknown Developer'}</div>
           {bhkPropertyString && (
-            <div className="text-sm font-medium text-gray-800 mb-1">{bhkPropertyString}</div>
+            <div className="text-base font-medium text-gray-800 mb-1">{bhkPropertyString}</div>
           )}
-          <div className="text-gray-600 text-xs sm:text-sm mb-1">{locationString}</div>
+          <div className="text-gray-600 text-sm truncate">{locationString}</div>
         </div>
-        {/* Right: Price and Actions */}
-        <div className="flex flex-col items-end min-w-[100px] sm:min-w-[120px] ml-0 sm:ml-4 mt-2 sm:mt-0 gap-2">
-          <span className="text-2xl sm:text-3xl font-bold text-[#044ca3]">
+        {/* Right: Price */}
+        <div className="flex flex-col items-end min-w-[120px] ml-4">
+          <span className="text-xl font-bold text-[#044ca3]">
             {formatPriceWithUnit(project.price_range.min, project.price_range.min_unit)}
             {project.price_range.max ?
               ` - ${formatPriceWithUnit(project.price_range.max, project.price_range.max_unit)}`
               : ''}
           </span>
+          <span className="text-xs text-gray-500 mt-1">Price</span>
         </div>
       </div>
     </div>

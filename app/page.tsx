@@ -8,7 +8,7 @@ import ContactModal from '@/components/ContactModal';
 import { Toaster } from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
 import SearchBox from './components/SearchBox';
-import DeveloperCard from './components/DeveloperCard';
+import DeveloperCard, { type Developer } from './components/DeveloperCard';
 import Footer from './components/Footer';
 
 // Type for raw database response
@@ -17,15 +17,6 @@ type RawProject = Omit<Project, 'city' | 'locality' | 'developer'> & {
   locality: { id: string; name: string; }[];
   developer: { id: string; name: string; phone: string; }[];
 };
-
-// Define Developer type
-interface Developer {
-  id: string;
-  name: string;
-  logo_url: string;
-  description: string;
-  phone: string;
-}
 
 export default function HomePage() {
   // State management

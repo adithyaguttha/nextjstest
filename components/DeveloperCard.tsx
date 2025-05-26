@@ -18,14 +18,15 @@ export default function DeveloperCard({ developer }: DeveloperCardProps) {
 
   return (
     <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center text-center">
-      <Image
-        src={logoUrl}
-        alt={developer.name}
-        width={80}
-        height={80}
-        className="w-20 h-20 rounded-full object-cover mb-4 border border-gray-200 bg-gray-100"
-        loading="lazy"
-      />
+      <div className="relative w-20 h-20 mb-4">
+        <Image
+          src={logoUrl}
+          alt={developer.name}
+          fill
+          className="rounded-full object-cover border border-gray-200 bg-gray-100"
+          loading="lazy"
+        />
+      </div>
       <h3 className="text-lg font-bold text-gray-900 mb-1 truncate">{developer.name}</h3>
       {developer.description && (
         <div className="text-sm text-gray-700 mb-4 line-clamp-3">{developer.description}</div>
