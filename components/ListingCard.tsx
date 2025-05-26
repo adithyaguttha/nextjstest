@@ -1,7 +1,7 @@
 import { FiHeart, FiMessageSquare, FiPhone, FiHome, FiChevronLeft, FiChevronRight, FiShare2, FiX, FiFileText, FiYoutube } from 'react-icons/fi';
 import { FaWhatsapp, FaFacebook, FaTwitter } from 'react-icons/fa';
 import Image from 'next/image';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 // Update Project type to match exact database schema
 type Project = {
@@ -78,6 +78,11 @@ export default function ListingCard({ project, projectImages, localityName, city
   const [imageError, setImageError] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
 
   // Close share popover when clicking outside
   useEffect(() => {
@@ -102,6 +107,29 @@ export default function ListingCard({ project, projectImages, localityName, city
     ...projectImages.map(img => img.url)
   ];
   const [currentImage, setCurrentImage] = useState(0);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = useCallback(() => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      setCurrentImage((prev) => (prev + 1) % images.length);
+    }
+    if (isRightSwipe) {
+      setCurrentImage((prev) => (prev - 1 + images.length) % images.length);
+    }
+  }, [touchStart, touchEnd, images.length]);
 
   const goToPrev = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -176,7 +204,12 @@ export default function ListingCard({ project, projectImages, localityName, city
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col">
       {/* Image Carousel */}
-      <div className="relative h-52 w-full bg-gray-100 flex items-center justify-center">
+      <div 
+        className="relative h-52 w-full bg-gray-100 flex items-center justify-center"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         {/* Top right icons */}
         <div className="absolute top-2 right-2 flex flex-col items-end gap-2 z-20">
           <button
@@ -234,10 +267,10 @@ export default function ListingCard({ project, projectImages, localityName, city
         {images.length > 1 && (
           <button
             onClick={goToPrev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-70 rounded-full p-1 z-10 hover:bg-opacity-100"
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-100 transition-colors z-10"
             aria-label="Previous image"
           >
-            <FiChevronLeft className="w-5 h-5 text-gray-700" />
+            <FiChevronLeft className="w-6 h-6 drop-shadow-lg" />
           </button>
         )}
         {!imageError && images[currentImage] ? (
@@ -254,10 +287,10 @@ export default function ListingCard({ project, projectImages, localityName, city
         {images.length > 1 && (
           <button
             onClick={goToNext}
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-70 rounded-full p-1 z-10 hover:bg-opacity-100"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-100 transition-colors z-10"
             aria-label="Next image"
           >
-            <FiChevronRight className="w-5 h-5 text-gray-700" />
+            <FiChevronRight className="w-6 h-6 drop-shadow-lg" />
           </button>
         )}
         {project.is_featured && (
@@ -271,7 +304,7 @@ export default function ListingCard({ project, projectImages, localityName, city
       <div className="p-3.5 flex flex-col flex-grow">
         {/* Project Name and RERA Badge */}
         <div className="mb-2 flex items-center gap-2">
-          <h3 className="text-[15px] font-semibold text-gray-900 line-clamp-1 flex-1">{project.name}</h3>
+          <h3 className="text-[15px] font-semibold text-gray-900 flex-1">{project.name}</h3>
           {project.rera_verified && project.rera_id && (
             <span
               className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-semibold cursor-pointer relative group flex-shrink-0"
@@ -326,7 +359,7 @@ export default function ListingCard({ project, projectImages, localityName, city
 
           {/* Developer Info */}
           <div className="border-t border-gray-100 pt-2.5 mb-2.5">
-            <p className="text-[13px] text-gray-600 line-clamp-1">By {getDeveloperName()}</p>
+            <p className="text-[13px] text-gray-600">By {getDeveloperName()}</p>
           </div>
 
           {/* Action Buttons */}

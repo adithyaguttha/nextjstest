@@ -30,12 +30,6 @@ interface BasicInfoProps {
 
 const unitOptions = ['sq.ft.', 'sq.m.', 'acres'];
 
-const priceUnitOptions = [
-  { label: 'L', value: 'L' },
-  { label: 'Cr', value: 'Cr' },
-  { label: 'K', value: 'K' },
-];
-
 const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext, onReset }) => {
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [cities, setCities] = useState<City[]>([]);
@@ -512,14 +506,16 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
               </div>
               <select
                 name="price_range.min_unit"
-                value={formData.price_range.min_unit || 'L'}
+                value={formData.price_range.min_unit}
                 onChange={handleChange}
                 className="py-2 px-2 rounded-lg border border-gray-300 bg-white focus:ring-green-500 focus:border-green-500"
                 style={{ minWidth: '90px' }}
               >
-                {priceUnitOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
+                <option value="">Select</option>
+                <option value="L">L</option>
+                <option value="Cr">Cr</option>
+                <option value="K">K</option>
+                <option value="Rupees">Rupees</option>
               </select>
             </div>
             {/* Max Price + Unit */}
@@ -539,14 +535,16 @@ const BasicInfo: React.FC<BasicInfoProps> = ({ formData, updateFormData, onNext,
               </div>
               <select
                 name="price_range.max_unit"
-                value={formData.price_range.max_unit || 'L'}
+                value={formData.price_range.max_unit}
                 onChange={handleChange}
                 className="py-2 px-2 rounded-lg border border-gray-300 bg-white focus:ring-green-500 focus:border-green-500"
                 style={{ minWidth: '90px' }}
               >
-                {priceUnitOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
+                <option value="">Select</option>
+                <option value="L">L</option>
+                <option value="Cr">Cr</option>
+                <option value="K">K</option>
+                <option value="Rupees">Rupees</option>
               </select>
             </div>
           </div>
