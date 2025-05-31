@@ -119,13 +119,13 @@ export default function ProfileDropdown({ user, onSignOut }: ProfileDropdownProp
           {/* Menu Items */}
           <div className="py-1">
             <button
-              onClick={() => handleMenuItemClick('/profile')}
+              onClick={() => handleMenuItemClick('/my-activity')}
               className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
             >
               <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Edit Profile
+              My Activity
             </button>
 
             {user.is_admin && (

@@ -1,0 +1,21 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/developers/add/page": "/developers/add",
+  "/developers/page": "/developers",
+  "/listings/page": "/listings",
+  "/profile/page": "/profile",
+  "/page": "/",
+  "/auth/page": "/auth",
+  "/dashboard/developers/page": "/dashboard/developers",
+  "/dashboard/projects/page": "/dashboard/projects",
+  "/dashboard/cities/page": "/dashboard/cities",
+  "/my-activity/enquiries/page": "/my-activity/enquiries",
+  "/my-activity/saved/page": "/my-activity/saved",
+  "/my-activity/seen/page": "/my-activity/seen",
+  "/my-activity/page": "/my-activity",
+  "/dashboard/page": "/dashboard",
+  "/dashboard/create-project/page": "/dashboard/create-project",
+  "/dashboard/users/page": "/dashboard/users",
+  "/project/[id]/page": "/project/[id]"
+}

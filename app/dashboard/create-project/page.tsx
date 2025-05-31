@@ -9,10 +9,10 @@ import MediaUpload from './components/MediaUpload';
 import ModelsPricing from './components/ModelsPricing';
 import AmenitiesFeatures from './components/AmenitiesFeatures';
 import ReviewSubmit from './components/ReviewSubmit';
-import { Toaster, toast } from 'react-hot-toast';
-import type { Amenity } from '../../components/AmenityMultiSelect';
 import { NavigationGuardProvider, useNavigationGuard } from './NavigationGuardProvider';
 import { supabase } from '../../../lib/supabase';
+import { Amenity } from '../../components/AmenityMultiSelect';
+import { toast } from 'react-hot-toast';
 
 // Define the project form data interface
 export interface ProjectFormData {
@@ -506,9 +506,8 @@ function CreateProject() {
   };
 
   return (
-    <>
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-8">
+    <div className="min-h-screen bg-gray-50 py-8 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-3xl">
         {/* Modern Horizontal Progress Bar */}
         <div className="w-full max-w-2xl mb-8 relative">
           {/* Progress Track */}
@@ -626,7 +625,7 @@ function CreateProject() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

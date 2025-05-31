@@ -2,6 +2,7 @@ import { Project } from '@/types/project';
 import { useState, useCallback } from 'react';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import Image from 'next/image';
+import SaveButton from '@/app/components/SaveButton';
 
 interface StandardProjectCardProps {
   project: Project;
@@ -92,6 +93,9 @@ export default function StandardProjectCard({
             loading="lazy"
           />
         )}
+        <div className="absolute top-2 right-2 z-20">
+          <SaveButton projectId={project.id} size="sm" variant="default" />
+        </div>
         {allImages.length > 1 && (
           <>
             <button

@@ -1,7 +1,8 @@
 import { Project } from '@/types/project';
-import { useState, useCallback } from 'react';
-import { FiChevronLeft, FiChevronRight, FiHeart, FiPhone } from 'react-icons/fi';
+import { useState, useCallback, useEffect } from 'react';
+import { FiChevronLeft, FiChevronRight, FiPhone } from 'react-icons/fi';
 import Image from 'next/image';
+import SaveButton from '@/app/components/SaveButton';
 
 interface OverlayProjectCardProps {
   project: Project;
@@ -16,29 +17,49 @@ export default function OverlayProjectCard({
   localityName,
   cityName,
 }: OverlayProjectCardProps) {
+  const [isMobile, setIsMobile] = useState(false);
+  const [currentImage, setCurrentImage] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Prepare images: cover image first, then the rest (excluding duplicates)
   const allImages = [
     project.cover_image_url,
     ...projectImages.map(img => img.url).filter(url => url && url !== project.cover_image_url)
   ];
-  const [currentImage, setCurrentImage] = useState(0);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
 
   const onTouchStart = (e: React.TouchEvent) => {
+    // Only handle touch events if not on mobile
+    if (!isMobile) {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
+    }
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
+    // Only handle touch events if not on mobile
+    if (!isMobile) {
     setTouchEnd(e.targetTouches[0].clientX);
+    }
   };
 
   const onTouchEnd = useCallback(() => {
-    if (!touchStart || !touchEnd) return;
+    // Only handle touch events if not on mobile
+    if (!isMobile && touchStart && touchEnd) {
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
@@ -49,12 +70,14 @@ export default function OverlayProjectCard({
     if (isRightSwipe) {
       setCurrentImage((prev) => (prev - 1 + allImages.length) % allImages.length);
     }
-  }, [touchStart, touchEnd, allImages.length]);
+    }
+  }, [touchStart, touchEnd, allImages.length, isMobile]);
 
   const nextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCurrentImage((prev) => (prev + 1) % allImages.length);
   };
+
   const prevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCurrentImage((prev) => (prev - 1 + allImages.length) % allImages.length);
@@ -88,15 +111,8 @@ export default function OverlayProjectCard({
     <div className="relative rounded-lg overflow-hidden shadow group h-72">
       {/* Top right icons */}
       <div className="absolute top-3 right-3 flex flex-col gap-2 z-20">
-        {/* Heart Icon with Tooltip */}
-        <div className="relative">
-          <button className="peer text-gray-300 hover:text-pink-400 bg-black/30 hover:bg-black/50 rounded-full p-2 transition-colors">
-            <FiHeart className="w-5 h-5" />
-          </button>
-          <span className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 peer-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">
-            Add to Wishlist
-          </span>
-        </div>
+        {/* Save Button */}
+        <SaveButton projectId={project.id} size="sm" variant="default" />
         {/* Call Icon with Tooltip */}
         <div className="relative">
           <button className="peer text-gray-300 hover:text-green-400 bg-black/30 hover:bg-black/50 rounded-full p-2 transition-colors">
@@ -113,6 +129,7 @@ export default function OverlayProjectCard({
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        style={{ touchAction: isMobile ? 'pan-y' : 'auto' }} // Disable horizontal touch actions on mobile
       >
         {allImages.length > 0 && (
           <Image
@@ -127,14 +144,14 @@ export default function OverlayProjectCard({
         {allImages.length > 1 && (
           <>
             <button
-              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-100 transition-colors"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-100 transition-colors z-10"
               onClick={prevImage}
               aria-label="Previous image"
             >
               <FiChevronLeft className="w-6 h-6 drop-shadow-lg" />
             </button>
             <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-100 transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-100 transition-colors z-10"
               onClick={nextImage}
               aria-label="Next image"
             >

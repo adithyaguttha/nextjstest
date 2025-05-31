@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '../../lib/AuthContext';
-import { Toaster, toast } from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
 export const dynamic = 'force-dynamic';
 
@@ -166,8 +166,7 @@ function AuthPageInner() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col pt-2 pb-4 sm:pt-8 sm:pb-12 sm:px-6 lg:px-8">
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+    <div className="min-h-screen flex flex-col justify-center py-8 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div className="flex justify-center">
           <Link href="/" className="flex items-center space-x-2">

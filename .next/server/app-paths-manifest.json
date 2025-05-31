@@ -1,0 +1,21 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/developers/add/page": "app/developers/add/page.js",
+  "/developers/page": "app/developers/page.js",
+  "/listings/page": "app/listings/page.js",
+  "/profile/page": "app/profile/page.js",
+  "/page": "app/page.js",
+  "/auth/page": "app/auth/page.js",
+  "/dashboard/developers/page": "app/dashboard/developers/page.js",
+  "/dashboard/projects/page": "app/dashboard/projects/page.js",
+  "/dashboard/cities/page": "app/dashboard/cities/page.js",
+  "/my-activity/enquiries/page": "app/my-activity/enquiries/page.js",
+  "/my-activity/saved/page": "app/my-activity/saved/page.js",
+  "/my-activity/seen/page": "app/my-activity/seen/page.js",
+  "/my-activity/page": "app/my-activity/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/create-project/page": "app/dashboard/create-project/page.js",
+  "/dashboard/users/page": "app/dashboard/users/page.js",
+  "/project/[id]/page": "app/project/[id]/page.js"
+}

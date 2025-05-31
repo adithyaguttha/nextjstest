@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { FiSearch } from 'react-icons/fi';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ListingCard from '@/components/ListingCard';
 import EnquiryModal from '@/components/EnquiryModal';
 import ContactModal from '@/components/ContactModal';
-import { Toaster } from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
+import FilterBar, { FilterOptions } from '../components/FilterBar';
+import { Suspense } from 'react';
 
 // Update Project type to include models
 type Project = {
@@ -78,83 +79,262 @@ type RawProject = Omit<Project, 'city' | 'locality' | 'developer'> & {
   developer: { id: string; name: string; phone: string; }[];
 };
 
-type FilterOptions = {
-  priceRange: [number, number];
-  propertyType: string[];
-  bedrooms: string[];
-  location: string[];
-  city: string[];
-  status: string[];
+// Add type for project model
+type ProjectModel = {
+  bhk_type: string;
 };
 
-export default function ListingsPage() {
-  // State management
+// Create a client component wrapper
+function ListingsPageClient() {
+  const searchParams = useSearchParams();
+  const urlQuery = searchParams.get('search') || '';
+  const cityQuery = searchParams.get('city'); // Get city from query params
+  const searchQuery = searchParams.get('query'); // Get search term from query params
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showEnquiryModal, setShowEnquiryModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<FilterOptions>({
-    priceRange: [0, 100000000],
-    propertyType: [],
-    bedrooms: [],
-    location: [],
-    city: [],
-    status: [],
-  });
   const [projectImagesMap, setProjectImagesMap] = useState<Record<string, { url: string; category?: string }[]>>({});
   const [localityMap, setLocalityMap] = useState<Record<string, string>>({});
   const [cityMap, setCityMap] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState<FilterOptions>({
+    bhkTypes: [],
+    budgetRange: [0, 100],
+    possessionStatus: [],
+    propertyTypes: [],
+    developers: [],
+    localities: [],
+  });
+  const [availableBhkTypes, setAvailableBhkTypes] = useState<string[]>([]);
+  const [availableDevelopers, setAvailableDevelopers] = useState<{ id: string; name: string; }[]>([]);
+  const [availableLocalities, setAvailableLocalities] = useState<{ id: string; name: string; city_id: string; }[]>([]);
 
-  // Fetch projects and images from database
+  // Initialize filters from URL params
+  useEffect(() => {
+    const bhk = searchParams.get('bhk')?.split(',') || [];
+    const budgetMin = Number(searchParams.get('budget_min')) || 0;
+    const budgetMax = Number(searchParams.get('budget_max')) || 100;
+    const status = searchParams.get('status')?.split(',') || [];
+    const type = searchParams.get('type')?.split(',') || [];
+    const developer = searchParams.get('developer')?.split(',') || [];
+    const locality = searchParams.get('locality')?.split(',') || [];
+
+    setFilters({
+      bhkTypes: bhk,
+      budgetRange: [budgetMin, budgetMax] as [number, number],
+      possessionStatus: status,
+      propertyTypes: type,
+      developers: developer,
+      localities: locality,
+    });
+  }, [searchParams]);
+
+  // Fetch available filter options
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        // Fetch unique BHK types
+        const { data: bhkData, error: bhkError } = await supabase
+          .from('project_models')
+          .select('bhk_type')
+          .not('bhk_type', 'is', null)
+          .order('bhk_type');
+        
+        if (!bhkError && bhkData) {
+          const uniqueBhkTypes = [...new Set(bhkData.map((m: ProjectModel) => m.bhk_type))];
+          setAvailableBhkTypes(uniqueBhkTypes);
+        }
+
+        // Fetch developers
+        const { data: devData, error: devError } = await supabase
+          .from('developers')
+          .select('id, name')
+          .order('name');
+        
+        if (!devError && devData) {
+          setAvailableDevelopers(devData);
+        }
+
+        // Fetch localities
+        const { data: locData, error: locError } = await supabase
+          .from('localities')
+          .select('id, name, city_id')
+          .order('name');
+        
+        if (!locError && locData) {
+          setAvailableLocalities(locData);
+        }
+      } catch (err) {
+        console.error('Error fetching filter options:', err);
+      }
+    };
+
+    fetchFilterOptions();
+  }, []);
+
+  // Fetch all projects and images on mount (with city filter)
   useEffect(() => {
     const fetchProjectsAndImages = async () => {
       try {
         setLoading(true);
-        // Fetch projects
-        const { data: rawProjects, error: projectsError } = await supabase
+        let cityId: string | null = null;
+        let localityIds: string[] = [];
+        let cityIds: string[] = [];
+        let developerIds: string[] = [];
+
+        // Get locality_id from query params if present
+        const localityIdParam = searchParams.get('locality_id');
+        if (localityIdParam) {
+          localityIds = [localityIdParam];
+          // If we have a locality_id, get its city_id
+          const { data: localityData, error: localityError } = await supabase
+            .from('localities')
+            .select('city_id')
+            .eq('id', localityIdParam)
+            .single();
+          
+          if (!localityError && localityData) {
+            cityId = localityData.city_id;
+          }
+        } else if (cityQuery) {
+          // If we have a city name, get city ID
+          const { data: cityData, error: cityError } = await supabase
+            .from('cities')
+            .select('id')
+            .eq('name', cityQuery)
+            .single();
+          
+          if (cityError) throw new Error(`Failed to fetch city: ${cityError.message}`);
+          cityId = cityData?.id || null;
+
+          // If we have a search query and city ID, try to find matching locality
+          if (cityId && searchQuery) {
+            const { data: localityData, error: localityError } = await supabase
+              .from('localities')
+              .select('id')
+              .ilike('name', `%${searchQuery}%`)
+              .eq('city_id', cityId)
+              .single();
+            
+            if (!localityError && localityData) {
+              localityIds = [localityData.id];
+            }
+          }
+        } else if (searchQuery) {
+          // If only searchQuery is present, search for cities, localities, and developers
+          // First, search for matching cities
+          const { data: citiesData, error: citiesError } = await supabase
+            .from('cities')
+            .select('id')
+            .ilike('name', `%${searchQuery}%`);
+
+          if (!citiesError && citiesData) {
+            cityIds = citiesData.map(city => city.id);
+          }
+
+          // Then search for matching localities
+          const { data: localitiesData, error: localitiesError } = await supabase
+            .from('localities')
+            .select('id, city_id')
+            .ilike('name', `%${searchQuery}%`);
+
+          if (!localitiesError && localitiesData && localitiesData.length > 0) {
+            localityIds = localitiesData.map(loc => loc.id);
+            const localityCityIds = [...new Set(localitiesData.map(loc => loc.city_id))];
+            cityIds = [...new Set([...cityIds, ...localityCityIds])];
+          }
+
+          // Finally, search for matching developers
+          const { data: developersData, error: developersError } = await supabase
+            .from('developers')
+            .select('id')
+            .ilike('name', `%${searchQuery}%`);
+
+          if (!developersError && developersData) {
+            developerIds = developersData.map(dev => dev.id);
+          }
+        }
+
+        // Fetch projects with all filters
+        let query = supabase
           .from('projects')
           .select(`
-            id, 
-            name, 
-            developer_id,
-            city_id,
-            locality_id,
+            id, name, developer_id, city_id, locality_id,
             developer:developer_id(name, phone), 
             city:city_id(name), 
             locality:locality_id(name), 
-            price_range,
-            emi_details,
-            construction_status,
-            project_highlights,
-            location_coordinates,
-            brochure_url,
-            project_size,
-            created_at,
-            updated_at,
-            created_by,
-            is_active,
-            cover_image_url,
-            amenities,
-            is_featured,
-            possession_date,
-            rera_verified,
-            rera_id,
-            video_url,
-            slug,
-            developer_name,
-            models:project_models(bhk_type, availability_status)
+            price_range, emi_details, construction_status, project_highlights,
+            location_coordinates, brochure_url, project_size, created_at, updated_at, created_by, is_active, cover_image_url, amenities, is_featured, possession_date, rera_verified, rera_id, video_url, slug, developer_name, models:project_models(bhk_type, availability_status)
           `)
-          .eq('is_active', true)
-          .order('created_at', { ascending: false });
+          .eq('is_active', true);
 
-        if (projectsError) {
-          throw new Error(`Failed to fetch projects: ${projectsError.message}`);
+        // Apply city filter
+        if (cityId) {
+          query = query.eq('city_id', cityId);
+        } else if (cityIds.length > 0) {
+          query = query.in('city_id', cityIds);
         }
 
-        // Transform projects as before
+        // Apply locality filter
+        if (localityIds.length > 0) {
+          query = query.in('locality_id', localityIds);
+        } else if (filters.localities.length > 0) {
+          query = query.in('locality_id', filters.localities);
+        }
+
+        // Apply developer filter
+        if (developerIds.length > 0) {
+          query = query.in('developer_id', developerIds);
+        } else if (filters.developers.length > 0) {
+          query = query.in('developer_id', filters.developers);
+        }
+
+        // Apply BHK type filter
+        if (filters.bhkTypes.length > 0) {
+          // First get project IDs that have the selected BHK types
+          const { data: projectIdsWithBhk, error: bhkError } = await supabase
+            .from('project_models')
+            .select('project_id')
+            .in('bhk_type', filters.bhkTypes);
+
+          if (bhkError) throw bhkError;
+
+          // If we found projects with these BHK types, filter by their IDs
+          if (projectIdsWithBhk && projectIdsWithBhk.length > 0) {
+            const uniqueProjectIds = [...new Set(projectIdsWithBhk.map(p => p.project_id))];
+            query = query.in('id', uniqueProjectIds);
+          } else {
+            // If no projects found with these BHK types, return empty result
+            query = query.eq('id', 'none');
+          }
+        }
+
+        // Apply budget range filter
+        if (filters.budgetRange[0] > 0 || filters.budgetRange[1] < 100) {
+          query = query.gte('price_range->min', filters.budgetRange[0])
+            .lte('price_range->max', filters.budgetRange[1]);
+        }
+
+        // Apply possession status filter
+        if (filters.possessionStatus.length > 0) {
+          query = query.in('construction_status', filters.possessionStatus);
+        }
+
+        // Apply property type filter
+        if (filters.propertyTypes.length > 0) {
+          query = query.in('property_type', filters.propertyTypes);
+        }
+
+        // If no specific filters match, search by project name or developer
+        if (!cityId && cityIds.length === 0 && localityIds.length === 0 && developerIds.length === 0 && 
+            filters.localities.length === 0 && filters.developers.length === 0 && searchQuery) {
+          query = query.or(`name.ilike.%${searchQuery}%,developer_name.ilike.%${searchQuery}%`);
+        }
+
+        const { data: rawProjects, error: projectsError } = await query;
+        if (projectsError) throw new Error(`Failed to fetch projects: ${projectsError.message}`);
         const transformedProjects = (rawProjects as RawProject[] || []).map(project => ({
           ...project,
           city: project.city?.[0] || { id: project.city_id || '', name: 'Unknown City' },
@@ -164,17 +344,13 @@ export default function ListingsPage() {
             : (project.developer || { id: project.developer_id || '', name: project.developer_name || 'Unknown Developer', phone: '' })
         }));
         setAllProjects(transformedProjects);
-
         // Fetch all project images
         const projectIds = transformedProjects.map(p => p.id);
         const { data: allImages, error: imagesError } = await supabase
           .from('project_images')
           .select('project_id, image_url, category')
           .in('project_id', projectIds);
-        if (imagesError) {
-          throw new Error(`Failed to fetch project images: ${imagesError.message}`);
-        }
-        // Group images by project_id
+        if (imagesError) throw new Error(`Failed to fetch project images: ${imagesError.message}`);
         const imagesMap: Record<string, { url: string; category?: string }[]> = {};
         (allImages || []).forEach(img => {
           if (!imagesMap[img.project_id]) imagesMap[img.project_id] = [];
@@ -187,184 +363,120 @@ export default function ListingsPage() {
         setLoading(false);
       }
     };
-    fetchProjectsAndImages();
-  }, []);
 
-  // Fetch cities for filter options
+    fetchProjectsAndImages();
+  }, [cityQuery, searchQuery, searchParams, filters]);
+
+  // Fetch cities and localities for mapping
   useEffect(() => {
     const fetchCities = async () => {
       try {
-        const { data, error } = await supabase
-          .from('cities')
-          .select('id, name');
+        const { data, error } = await supabase.from('cities').select('id, name');
         if (error) throw error;
         const map: Record<string, string> = {};
         (data || []).forEach(city => { map[city.id] = city.name; });
         setCityMap(map);
-      } catch (err) {
-        console.error('Error fetching cities:', err);
-      }
+      } catch (err) { console.error('Error fetching cities:', err); }
     };
     fetchCities();
   }, []);
-
-  // Fetch localities
   useEffect(() => {
     const fetchLocalities = async () => {
       try {
-        const { data, error } = await supabase
-          .from('localities')
-          .select('id, name');
+        const { data, error } = await supabase.from('localities').select('id, name');
         if (error) throw error;
         const map: Record<string, string> = {};
         (data || []).forEach(loc => { map[loc.id] = loc.name; });
         setLocalityMap(map);
-      } catch (err) {
-        console.error('Error fetching localities:', err);
-      }
+      } catch (err) { console.error('Error fetching localities:', err); }
     };
     fetchLocalities();
   }, []);
-
-  // Filter projects based on search query and filters
-  const filteredProjects = useMemo(() => {
-    return allProjects.filter(project => {
-      // Search query filter
-      const matchesSearch = searchQuery === '' || 
-        project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.city?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.locality?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.developer?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.project_highlights.some(highlight => highlight.toLowerCase().includes(searchQuery.toLowerCase()));
-
-      // Price range filter
-      const matchesPrice = project.price_range.min >= filters.priceRange[0] && 
-                          project.price_range.max <= filters.priceRange[1];
-
-      // Property type filter (based on models)
-      const matchesPropertyType = filters.propertyType.length === 0 || 
-        project.amenities.some(amenity => filters.propertyType.includes(amenity));
-
-      // Bedrooms filter (based on models)
-      const matchesBedrooms = filters.bedrooms.length === 0 || 
-        project.amenities.some(amenity => 
-          filters.bedrooms.includes(amenity)
-        );
-
-      // Location filter
-      const matchesLocation = filters.location.length === 0 || 
-        filters.location.some(loc => 
-          project.locality?.name.toLowerCase().includes(loc.toLowerCase())
-        );
-
-      // City filter
-      const matchesCity = filters.city.length === 0 || 
-        filters.city.includes(project.city?.id || '');
-
-      // Status filter
-      const matchesStatus = filters.status.length === 0 || 
-        filters.status.includes(project.construction_status);
-
-      return matchesSearch && matchesPrice && matchesPropertyType && 
-             matchesBedrooms && matchesLocation && matchesCity && matchesStatus;
-    });
-  }, [allProjects, searchQuery, filters]);
 
   const handleEnquirySubmit = (formData: { name: string; phone: string; message: string }) => {
     console.log('Enquiry submitted:', formData);
       setShowEnquiryModal(false);
   };
 
-  // Reset all filters
-  const handleResetFilters = () => {
-    setSearchQuery('');
-    setFilters({
-      priceRange: [0, 100000000],
-      propertyType: [],
-      bedrooms: [],
-      location: [],
-      city: [],
-      status: [],
-    });
+  const handleFilterChange = (newFilters: FilterOptions) => {
+    setFilters(newFilters);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Toaster position="top-right" />
-      
-      {/* Header with Search and Filters - Sticky below navbar */}
-      <div className="bg-white shadow-sm sticky top-16 z-40 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex gap-3 items-center overflow-x-auto">
-            {/* Search Bar */}
-            <div className="flex-shrink-0 w-full max-w-xs">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search by name, location, developer..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#044ca3] focus:border-transparent"
-                />
-                <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <main className="min-h-screen bg-gray-50">
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#044ca3] mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading projects...</p>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Filters Sidebar - Hidden on mobile */}
+          <div className="hidden lg:block lg:col-span-1">
+            <FilterBar
+              onFilterChange={handleFilterChange}
+              initialFilters={filters}
+              availableBhkTypes={availableBhkTypes}
+              availableDevelopers={availableDevelopers}
+              availableLocalities={availableLocalities}
+            />
           </div>
-        ) : error ? (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-medium text-red-600">Error</h3>
-            <p className="mt-2 text-gray-600">{error}</p>
-          </div>
-        ) : (
-          <>
-      {/* Projects Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProjects.map((project) => (
-          <ListingCard
-            key={project.id}
-            project={project}
-                  projectImages={projectImagesMap[project.id] || []}
-                  localityName={localityMap[project.locality_id] || 'Unknown Locality'}
-                  cityName={cityMap[project.city_id] || 'Unknown City'}
-            onEnquire={() => {
-              setSelectedProject(project);
-              setShowEnquiryModal(true);
-            }}
-            onContact={() => {
-              setSelectedProject(project);
-              setShowContactModal(true);
-            }}
-          />
-        ))}
-      </div>
 
-      {/* Empty State */}
-            {filteredProjects.length === 0 && (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-gray-900">No projects found</h3>
-          <p className="mt-2 text-gray-600">
-            We couldn&apos;t find any projects matching your criteria.
-          </p>
-                <button
-                  onClick={handleResetFilters}
-                  className="mt-4 px-4 py-2 text-[#044ca3] hover:text-[#033b7d] transition-colors"
-                >
-                  Clear all filters
-                </button>
+          {/* Projects Grid - Full width on mobile */}
+          <div className="col-span-1 lg:col-span-3">
+            {/* Mobile Filter Button and Panel */}
+            <div className="lg:hidden">
+              <FilterBar
+                onFilterChange={handleFilterChange}
+                initialFilters={filters}
+                availableBhkTypes={availableBhkTypes}
+                availableDevelopers={availableDevelopers}
+                availableLocalities={availableLocalities}
+              />
+            </div>
+
+            {urlQuery && (
+              <h2 className="text-2xl font-semibold mb-6">Showing results for &quot;{urlQuery}&quot;</h2>
+            )}
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#044ca3] mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading projects...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <h3 className="text-lg font-medium text-red-600">Error</h3>
+                <p className="mt-2 text-gray-600">{error}</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {allProjects.map((project) => (
+                    <ListingCard
+                      key={project.id}
+                      project={project}
+                      projectImages={projectImagesMap[project.id] || []}
+                      localityName={localityMap[project.locality_id] || 'Unknown Locality'}
+                      cityName={cityMap[project.city_id] || 'Unknown City'}
+                      onEnquire={() => {
+                        setSelectedProject(project);
+                        setShowEnquiryModal(true);
+                      }}
+                      onContact={() => {
+                        setSelectedProject(project);
+                        setShowContactModal(true);
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Empty State */}
+                {allProjects.length === 0 && (
+                  <div className="text-center py-12">
+                    <h3 className="text-lg font-medium text-gray-900">No projects found</h3>
+                    <p className="mt-2 text-gray-600">Try adjusting your filters or search criteria.</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      )}
-          </>
-        )}
       </div>
 
       {/* Modals */}
@@ -385,6 +497,22 @@ export default function ListingsPage() {
           />
         </>
       )}
-    </div>
+    </main>
+  );
+}
+
+// Server component that wraps the client component in Suspense
+export default function ListingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#044ca3] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ListingsPageClient />
+    </Suspense>
   );
 }

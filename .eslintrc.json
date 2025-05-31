@@ -1,0 +1,32 @@
+{
+  "extends": [
+    "next/core-web-vitals"
+  ],
+  "rules": {
+    // Disable unused variables warnings for imports that might be used in the future
+    "@typescript-eslint/no-unused-vars": ["warn", {
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_",
+      "ignoreRestSiblings": true
+    }],
+    
+    // Allow unescaped entities in JSX
+    "react/no-unescaped-entities": "off",
+    
+    // Fix React Hooks exhaustive deps warnings
+    "react-hooks/exhaustive-deps": "warn",
+    
+    // Fix React Hooks rules of hooks
+    "react-hooks/rules-of-hooks": "error",
+    
+    // Disable specific unused imports that are needed for type definitions
+    "@typescript-eslint/no-unused-vars": ["warn", {
+      "vars": "all",
+      "args": "after-used",
+      "ignoreRestSiblings": true,
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_",
+      "caughtErrorsIgnorePattern": "^_"
+    }]
+  }
+} 

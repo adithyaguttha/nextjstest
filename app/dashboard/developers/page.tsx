@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../lib/AuthContext';
-import { Toaster, toast } from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
 interface Developer {
   id: string;
@@ -234,8 +234,8 @@ export default function DevelopersPage() {
   }, [developers, developerSearchTerm]);
 
   return (
-    <div className="space-y-6">
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+    <div className="min-h-screen bg-gray-50 py-8 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-7xl">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Developers</h1>
         <button
@@ -584,6 +584,7 @@ export default function DevelopersPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 } 

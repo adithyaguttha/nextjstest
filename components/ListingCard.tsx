@@ -1,7 +1,8 @@
-import { FiHeart, FiMessageSquare, FiPhone, FiHome, FiChevronLeft, FiChevronRight, FiShare2, FiX, FiFileText, FiYoutube } from 'react-icons/fi';
+import { FiMessageSquare, FiPhone, FiHome, FiChevronLeft, FiChevronRight, FiShare2, FiX, FiFileText, FiYoutube } from 'react-icons/fi';
 import { FaWhatsapp, FaFacebook, FaTwitter } from 'react-icons/fa';
 import Image from 'next/image';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import SaveButton from '@/app/components/SaveButton';
 
 // Update Project type to match exact database schema
 type Project = {
@@ -212,13 +213,7 @@ export default function ListingCard({ project, projectImages, localityName, city
       >
         {/* Top right icons */}
         <div className="absolute top-2 right-2 flex flex-col items-end gap-2 z-20">
-          <button
-            className="bg-white bg-opacity-80 rounded-full p-1.5 shadow hover:bg-opacity-100 transition-colors"
-            title="Add to Wishlist"
-            // onClick={...} // Add wishlist logic here
-          >
-            <FiHeart className="w-4 h-4 text-gray-700" />
-          </button>
+          <SaveButton projectId={project.id} size="sm" variant="ghost" />
           <div className="relative">
             <button
               className="bg-white bg-opacity-80 rounded-full p-1.5 shadow hover:bg-opacity-100 transition-colors"
@@ -363,38 +358,42 @@ export default function ListingCard({ project, projectImages, localityName, city
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2">
+          <div className="flex gap-2.5 mt-2.5 pt-2.5 border-t border-gray-100">
             {/* Call Button */}
             <button
-              onClick={onContact}
-              className="flex items-center justify-center gap-1.5 px-2.5 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              title="Call Developer"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onContact();
+              }}
+              className="flex-1 text-[13px] text-[#044ca3] hover:text-[#033b7d] flex items-center justify-center gap-1.5 bg-gray-50 hover:bg-gray-100 rounded px-2 py-1.5 transition-colors"
             >
-              <FiPhone className="w-4 h-4" />
+              <FiPhone className="w-3.5 h-3.5" />
+              <span>Call</span>
             </button>
 
-            {/* WhatsApp Button */}
-            <button
-              onClick={() => {
-                const phone = getDeveloperPhone();
-                const base = 'https://wa.me/';
-                const url = phone
-                  ? `${base}${formatPhoneForWhatsApp(phone)}?text=Hi, I'm interested in ${encodeURIComponent(project.name)}`
-                  : `${base}?text=Hi, I'm interested in ${encodeURIComponent(project.name)}`;
-                window.open(url, '_blank');
-              }}
-              className="flex items-center justify-center gap-1.5 px-2.5 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              title="Contact on WhatsApp"
+            {/* WhatsApp Button - Icon Only */}
+            <a
+              href={`https://wa.me/${formatPhoneForWhatsApp(getDeveloperPhone())}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-green-600 hover:text-green-700 flex items-center justify-center bg-gray-50 hover:bg-gray-100 rounded p-1.5 transition-colors"
+              title="Chat on WhatsApp"
             >
-              <FaWhatsapp className="w-4 h-4 text-green-600" />
-            </button>
+              <FaWhatsapp className="w-4 h-4" />
+            </a>
 
             {/* Enquire Button */}
             <button
-              onClick={onEnquire}
-              className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 bg-[#044ca3] text-white rounded-md hover:bg-[#033b7d] transition-colors text-[13px]"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onEnquire();
+              }}
+              className="flex-1 text-[13px] text-white bg-[#044ca3] hover:bg-[#033b7d] flex items-center justify-center gap-1.5 rounded px-2 py-1.5 transition-colors"
             >
-              <FiMessageSquare className="w-4 h-4" />
+              <FiMessageSquare className="w-3.5 h-3.5" />
               <span>Enquire</span>
             </button>
           </div>

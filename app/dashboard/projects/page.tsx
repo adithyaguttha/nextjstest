@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import { PlusIcon, PencilSquareIcon, TrashIcon, EyeIcon, ChevronUpIcon, ChevronDownIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 import DeleteProjectModal from '../../components/DeleteProjectModal';
-import { Toaster, toast } from 'react-hot-toast';
 
 // Define the interface to match the Supabase query result structure
 interface Project {
@@ -160,29 +159,10 @@ export default function ProjectsPage() {
       const { error } = await supabase.from('projects').delete().eq('id', projectToDelete.id);
       if (error) throw error;
       
-      // Show success toast
-      toast.success('Project deleted successfully', {
-        duration: 3000,
-        position: 'top-right',
-        style: {
-          background: '#10B981',
-          color: '#fff',
-        },
-      });
-      
       // Refresh the projects list
       fetchProjects();
     } catch (err) {
       console.error('Error deleting project:', err);
-      // Show error toast
-      toast.error('Failed to delete project', {
-        duration: 3000,
-        position: 'top-right',
-        style: {
-          background: '#EF4444',
-          color: '#fff',
-        },
-      });
       throw new Error('Failed to delete project');
     } finally {
       setLoading(false);
@@ -203,212 +183,211 @@ export default function ProjectsPage() {
   });
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-8">
-      {/* Add Toaster component */}
-      <Toaster />
-
-      <div className="sm:flex sm:items-center">
-        <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            A list of all real estate projects in the system.
-          </p>
-        </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <Link
-            href="/dashboard/create-project"
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-          >
-            <PlusIcon className="-ml-1 mr-2 h-4 w-4" />
-            Add Project
-          </Link>
-        </div>
-      </div>
-
-      {error && (
-        <div className="mt-6 p-4 rounded-md bg-red-50 border border-red-200">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
-      )}
-
-      {/* Filters and search */}
-      <div className="mt-6 flex flex-col sm:flex-row gap-4">
-        <div className="relative rounded-md shadow-sm flex-1">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+    <div className="min-h-screen bg-gray-50 py-8 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-7xl">
+        <div className="sm:flex sm:items-center">
+          <div className="sm:flex-auto">
+            <h1 className="text-2xl font-semibold text-gray-900">Projects</h1>
+            <p className="mt-2 text-sm text-gray-700">
+              A list of all real estate projects in the system.
+            </p>
           </div>
-          <input
-            type="text"
-            placeholder="Search projects..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2"
-          />
+          <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+            <Link
+              href="/dashboard/create-project"
+              className="inline-flex items-center justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+            >
+              <PlusIcon className="-ml-1 mr-2 h-4 w-4" />
+              Add Project
+            </Link>
+          </div>
         </div>
-        <div className="w-full sm:w-auto flex space-x-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-          >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          <button
-            onClick={() => {
-              setSortColumn('created_at');
-              setSortDirection('desc');
-              setSearchTerm('');
-              setStatusFilter('all');
-            }}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Reset
-          </button>
-        </div>
-      </div>
 
-      <div className="mt-8 flex flex-col">
-        <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              {loading ? (
-                <div className="p-8 text-center">
-                  <div className="inline-flex items-center px-4 py-2">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    <span>Loading projects...</span>
+        {error && (
+          <div className="mt-6 p-4 rounded-md bg-red-50 border border-red-200">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
+        {/* Filters and search */}
+        <div className="mt-6 flex flex-col sm:flex-row gap-4">
+          <div className="relative rounded-md shadow-sm flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Search projects..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2"
+            />
+          </div>
+          <div className="w-full sm:w-auto flex space-x-2">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <button
+              onClick={() => {
+                setSortColumn('created_at');
+                setSortDirection('desc');
+                setSearchTerm('');
+                setStatusFilter('all');
+              }}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-col">
+          <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
+            <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                {loading ? (
+                  <div className="p-8 text-center">
+                    <div className="inline-flex items-center px-4 py-2">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>Loading projects...</span>
+                    </div>
                   </div>
-                </div>
-              ) : filteredProjects.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-gray-500">No projects found. {searchTerm ? 'Try different search terms or ' : ''}Create a new project to get started.</p>
-                </div>
-              ) : (
-                <table className="min-w-full divide-y divide-gray-300">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
-                        <button 
-                          onClick={() => handleSort('name')}
-                          className="group inline-flex items-center font-semibold text-gray-900"
-                        >
-                          Project Name
-                          {getSortIcon('name')}
-                        </button>
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Developer
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Location
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        <button 
-                          onClick={() => handleSort('price_range->>min')}
-                          className="group inline-flex items-center font-semibold text-gray-900"
-                        >
-                          Price Range
-                          {getSortIcon('price_range->>min')}
-                        </button>
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        <button 
-                          onClick={() => handleSort('created_at')}
-                          className="group inline-flex items-center font-semibold text-gray-900"
-                        >
-                          Created
-                          {getSortIcon('created_at')}
-                        </button>
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                        Status
-                      </th>
-                      <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                        <span className="sr-only">Actions</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {filteredProjects.map((project) => (
-                      <tr key={project.id}>
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                          {project.name}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {project.developer?.name || 'Unknown Developer'}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {project.locality?.name || 'Unknown Locality'}, {project.city?.name || 'Unknown City'}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {project.price_range.currency} {project.price_range.min.toLocaleString()} - {project.price_range.max.toLocaleString()}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {new Date(project.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm">
-                          <span
-                            className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                              project.is_active
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
+                ) : filteredProjects.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <p className="text-gray-500">No projects found. {searchTerm ? 'Try different search terms or ' : ''}Create a new project to get started.</p>
+                  </div>
+                ) : (
+                  <table className="min-w-full divide-y divide-gray-300">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+                          <button 
+                            onClick={() => handleSort('name')}
+                            className="group inline-flex items-center font-semibold text-gray-900"
                           >
-                            {project.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <div className="flex justify-end space-x-2">
-                            <Link
-                              href={`/project/${project.id}`}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="View"
-                            >
-                              <EyeIcon className="h-5 w-5" />
-                            </Link>
-                            <Link
-                              href={`/dashboard/projects/edit/${project.id}`}
-                              className="text-green-600 hover:text-green-900"
-                              title="Edit"
-                            >
-                              <PencilSquareIcon className="h-5 w-5" />
-                            </Link>
-                            <button
-                              onClick={() => handleDeleteClick(project)}
-                              className="text-red-600 hover:text-red-900"
-                              title="Delete"
-                            >
-                              <TrashIcon className="h-5 w-5" />
-                            </button>
-                          </div>
-                        </td>
+                            Project Name
+                            {getSortIcon('name')}
+                          </button>
+                        </th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          Developer
+                        </th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          Location
+                        </th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          <button 
+                            onClick={() => handleSort('price_range->>min')}
+                            className="group inline-flex items-center font-semibold text-gray-900"
+                          >
+                            Price Range
+                            {getSortIcon('price_range->>min')}
+                          </button>
+                        </th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          <button 
+                            onClick={() => handleSort('created_at')}
+                            className="group inline-flex items-center font-semibold text-gray-900"
+                          >
+                            Created
+                            {getSortIcon('created_at')}
+                          </button>
+                        </th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                          Status
+                        </th>
+                        <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                          <span className="sr-only">Actions</span>
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {filteredProjects.map((project) => (
+                        <tr key={project.id}>
+                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                            {project.name}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {project.developer?.name || 'Unknown Developer'}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {project.locality?.name || 'Unknown Locality'}, {project.city?.name || 'Unknown City'}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {project.price_range.currency} {project.price_range.min.toLocaleString()} - {project.price_range.max.toLocaleString()}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                            {new Date(project.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm">
+                            <span
+                              className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
+                                project.is_active
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}
+                            >
+                              {project.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                            <div className="flex justify-end space-x-2">
+                              <Link
+                                href={`/project/${project.id}`}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="View"
+                              >
+                                <EyeIcon className="h-5 w-5" />
+                              </Link>
+                              <Link
+                                href={`/dashboard/projects/edit/${project.id}`}
+                                className="text-green-600 hover:text-green-900"
+                                title="Edit"
+                              >
+                                <PencilSquareIcon className="h-5 w-5" />
+                              </Link>
+                              <button
+                                onClick={() => handleDeleteClick(project)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Delete"
+                              >
+                                <TrashIcon className="h-5 w-5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Add the DeleteProjectModal */}
-      {projectToDelete && (
-        <DeleteProjectModal
-          isOpen={deleteModalOpen}
-          onClose={() => {
-            setDeleteModalOpen(false);
-            setProjectToDelete(null);
-          }}
-          onConfirm={handleDeleteConfirm}
-        />
-      )}
+        {/* Add the DeleteProjectModal */}
+        {projectToDelete && (
+          <DeleteProjectModal
+            isOpen={deleteModalOpen}
+            onClose={() => {
+              setDeleteModalOpen(false);
+              setProjectToDelete(null);
+            }}
+            onConfirm={handleDeleteConfirm}
+          />
+        )}
+      </div>
     </div>
   );
 } 

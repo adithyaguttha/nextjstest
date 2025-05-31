@@ -5,7 +5,6 @@ import { Project } from '@/types/project';
 import ProjectSection from '@/components/ProjectSection';
 import EnquiryModal from '@/components/EnquiryModal';
 import ContactModal from '@/components/ContactModal';
-import { Toaster } from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
 import SearchBox from './components/SearchBox';
 import DeveloperCard, { type Developer } from './components/DeveloperCard';
@@ -292,27 +291,25 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <Toaster position="top-right" />
-
       {/* Hero Section */}
-      <section className="relative h-[360px] flex items-center justify-center">
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ 
-            backgroundImage: 'url("/assets/hero.png")',
-            backgroundPosition: 'center',
-            backgroundSize: 'cover'
-          }}
-        />
-        <div className="absolute inset-0 bg-black opacity-50"></div>
-        <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+      <section className="relative w-full min-h-[70vh] flex flex-col items-center justify-center overflow-hidden">
+        {/* Background Image (mobile & desktop) */}
+        <div className="absolute inset-0 w-full h-full bg-cover bg-bottom sm:bg-center" style={{ backgroundImage: 'url("/assets/hero.png")' }} />
+        {/* Overlay for readability */}
+        <div className="absolute inset-0 bg-black/30" />
+        {/* Mobile: Centered SearchBox, image background */}
+        <div className="block sm:hidden w-full flex flex-col items-center justify-center relative z-10">
+          <SearchBox cardClassName="mt-8 mb-8" />
+        </div>
+        {/* Desktop/Tablet: Existing hero content, image background */}
+        <div className="hidden sm:block w-full relative z-10">
+          <div className="relative text-center px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 sm:mb-6">
             Find Your Dream Property
           </h1>
           <p className="text-lg sm:text-xl text-white mb-6 sm:mb-8 max-w-2xl mx-auto">
             Discover the perfect home across India&apos;s top cities
           </p>
-          <div className="hero-search-container w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-2xl mx-auto">
           <SearchBox />
           </div>
         </div>

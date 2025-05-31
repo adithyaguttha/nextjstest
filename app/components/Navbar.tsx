@@ -6,15 +6,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../../lib/AuthContext';
 import ProfileDropdown from './ProfileDropdown';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
 
 export default function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { user, signOut } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const isHomePage = pathname === '/';
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -32,18 +31,6 @@ export default function Navbar() {
       document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (isHomePage) {
-        const scrollPosition = window.scrollY;
-        setIsScrolled(scrollPosition > 0);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [isHomePage]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -97,46 +84,64 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Search Bar - Conditional visibility based on page */}
-          <div className={`hidden md:flex flex-1 max-w-md mx-8 transition-all duration-300 ease-in-out transform ${
-            isHomePage 
-              ? (isScrolled ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none')
-              : 'opacity-100 translate-y-0'
-          }`}>
-            <div className="relative w-full">
-              <input
-                type="text"
-                placeholder="Search properties..."
-                className="w-full px-4 py-2 text-sm bg-white/10 text-white placeholder-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-white/20 focus:bg-white/20 transition-colors"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:text-gray-200">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
           {/* Hamburger Menu Button */}
           <div className="-mr-2 flex md:hidden">
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger asChild>
             <button
-              onClick={() => setIsOpen(!isOpen)}
               className="inline-flex items-center justify-center p-2 rounded-md text-blue-100 hover:text-white hover:bg-[#033b7d] focus:outline-none"
               aria-expanded={isOpen}
             >
               <span className="sr-only">Open main menu</span>
-              {!isOpen ? (
-                <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              ) : (
-                <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                  <Menu className="h-6 w-6" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px] p-0 bg-white">
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle className="text-xl font-bold text-gray-900">Menu</SheetTitle>
+                </SheetHeader>
+                
+                {/* Mobile Navigation Links */}
+                <div className="flex-1 p-4">
+                  <div className="flex flex-col space-y-1">
+                    <Link
+                      href="/"
+                      className="px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-[#044ca3] rounded-md transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Home
+                    </Link>
+                    <Link
+                      href="/listings"
+                      className="px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-[#044ca3] rounded-md transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Listings
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Mobile Auth Buttons */}
+                {!user && (
+                  <div className="p-4 border-t border-gray-200">
+                    <Link
+                      href="/auth?tab=login"
+                      className="block w-full px-4 py-2 mb-3 rounded-md text-sm font-medium text-[#044ca3] hover:bg-blue-50 transition-colors border border-[#044ca3] text-center"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/auth?tab=signup"
+                      className="block w-full px-4 py-2 rounded-md text-sm font-medium bg-[#044ca3] text-white hover:bg-[#033b7d] transition-colors shadow-sm hover:shadow text-center"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Sign up
+                    </Link>
+                  </div>
               )}
-            </button>
+              </SheetContent>
+            </Sheet>
           </div>
 
           {/* Desktop Navigation Menu */}
@@ -173,86 +178,6 @@ export default function Navbar() {
                 </>
               )}
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Menu Overlay */}
-      <div
-        className={`fixed inset-0 z-50 md:hidden transition-opacity duration-300 ease-in-out ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        {/* Backdrop */}
-        <div
-          className={`absolute inset-0 bg-black transition-opacity duration-300 ${
-            isOpen ? 'opacity-50' : 'opacity-0'
-          }`}
-          onClick={() => setIsOpen(false)}
-        />
-
-        {/* Mobile Menu Panel */}
-        <div
-          className={`absolute right-0 top-0 h-full w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${
-            isOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          <div className="h-full flex flex-col">
-            {/* Mobile Search Bar - Always visible */}
-            <div className="px-4 pt-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search properties..."
-                  className="w-full px-4 py-2 text-sm bg-gray-100 text-gray-900 placeholder-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#044ca3] focus:bg-white transition-colors"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <button className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </button>
-          </div>
-        </div>
-
-            {/* Mobile Navigation Links */}
-            <div className="flex-1 px-4 pt-4 pb-3 space-y-1 overflow-y-auto">
-            <Link
-              href="/"
-                className={navLinkClass('/')}
-                onClick={() => setIsOpen(false)}
-            >
-              Home
-            </Link>
-            <Link
-              href="/listings"
-                className={navLinkClass('/listings')}
-                onClick={() => setIsOpen(false)}
-            >
-              Listings
-            </Link>
-            </div>
-
-            {/* Mobile Auth Buttons - Only show if user is not authenticated */}
-            {!user && (
-              <div className="px-4 py-4 border-t border-gray-200">
-                <Link
-                  href="/auth?tab=login"
-                  className="block w-full px-4 py-2 mb-3 rounded-md text-sm font-medium text-[#044ca3] hover:bg-blue-50 transition-colors border border-[#044ca3] text-center"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/auth?tab=signup"
-                  className="block w-full px-4 py-2 rounded-md text-sm font-medium bg-[#044ca3] text-white hover:bg-[#033b7d] transition-colors shadow-sm hover:shadow text-center"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Sign up
-                </Link>
-              </div>
-            )}
           </div>
         </div>
       </div>
